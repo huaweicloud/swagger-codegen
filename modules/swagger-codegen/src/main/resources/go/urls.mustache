@@ -1,0 +1,19 @@
+{{>partial_header}}
+package {{classVarName}}
+
+
+{{#alloperations}}
+{{#operations}}
+import (
+	"github.com/huaweicloud/golangsdk"
+{{#imports}}	"{{import}}"
+{{/imports}}
+)
+
+
+{{#operation}}
+func {{{nickname}}}URL(c *golangsdk.ServiceClient{{#pathParams}}{{^vendorExtensions.x-isProject}}, {{{paramName}}} {{dataType}}{{/vendorExtensions.x-isProject}}{{/pathParams}}) string {
+	return c.ServiceURL({{#pathParams}}{{#vendorExtensions.x-isProject}}c.ProjectID{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-resourcePath}}, "{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#vendorExtensions.x-originPath}}, "{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}}{{#pathParams}}{{^vendorExtensions.x-isProject}}, {{{paramName}}}{{#hasMore}} ,{{/hasMore}}{{/vendorExtensions.x-isProject}}{{/pathParams}})
+}
+
+{{/operation}}{{/operations}}{{/alloperations}}

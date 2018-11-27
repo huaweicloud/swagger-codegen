@@ -16,6 +16,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import java.io.*;
 import java.util.*;
@@ -759,6 +761,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         mergeModelApiInfo(allModels, allOperations);
         files.add(writeModelFile(allModels, swagger.getHost(), swagger.getInfo().getVersion()));
         files.add(writeApiFile(allOperations, swagger.getHost(), swagger.getBasePath(), swagger.getInfo().getVersion()));
+        writeAllApiModelToFile(files, allOperations, allModels, swagger);
 
         // supporting files
         Map<String, Object> bundle = buildSupportFileBundle(allOperations, allModels);
@@ -767,24 +770,43 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         return files;
     }
 
-
-    private String setVarReqResp(CodegenProperty var, boolean isReq, boolean isResp, Map<String, Map<String, Object>> modelMap) {
+    private String setVarReqResp(CodegenProperty var, List<Map<String, Object>> tagsInfo, Map<String, Map<String, Object>> modelMap) {
         if (var.isContainer) {
-            return setVarReqResp(var.items, isReq, isResp, modelMap);
+            return setVarReqResp(var.items, tagsInfo, modelMap);
         }
         if (var.complexType != null) {
             if (modelMap.containsKey(var.complexType)) {
                 Map<String, Object> model = modelMap.get(var.complexType);
-                if (isResp) {
-                    model.put("isResp", true);
+                List<Map<String, Object>> newTagsInfo = new ArrayList<Map<String, Object>>();
+                if (model.containsKey("tagsInfo")) {
+                    List<Object> oldTagsInfo = (List<Object>) model.get("tagsInfo");
+                    newTagsInfo.addAll((List<Map<String, Object>>) model.get("tagsInfo"));
+                    for (int i = 0; i < oldTagsInfo.size(); i++) {
+                        Map<String, Object> oldTagInfo = (Map<String, Object>) oldTagsInfo.get(i);
+                        String oldTagName = oldTagInfo.get("classVarName").toString();
+                        String oldApiVersion = oldTagInfo.get("apiVersion").toString();
+
+                        for (int j = 0; j < tagsInfo.size(); j++) {
+                            Map<String, Object> tagInfo = (Map<String, Object>) tagsInfo.get(j);
+                            String modelTagName = tagInfo.get("classVarName").toString();
+                            String modelapiVersion = tagInfo.get("apiVersion").toString();
+                            if (oldTagName.equals(modelTagName) && oldApiVersion.equals(modelapiVersion)){
+                                continue;
+                            }
+                            newTagsInfo.add(tagInfo);
+                        }
+                    }
+                } else {
+                    newTagsInfo.addAll(tagsInfo);
                 }
-                if (isReq) {
-                     model.put("isReq", true);
+
+                if (newTagsInfo.size() > 0) {
+                    model.put("tagsInfo", newTagsInfo);
                 }
 
                 CodegenModel cm = (CodegenModel)model.get("model");
                 for (CodegenProperty var1 : cm.vars) {
-                    String complexType = setVarReqResp(var1, model.containsKey("isReq"), model.containsKey("isResp"), modelMap);
+                    String complexType = setVarReqResp(var1, tagsInfo, modelMap);
                     if (var1.isContainer && !complexType.isEmpty()) {
                         if (var1.vendorExtensions == null) {
                             var1.vendorExtensions = new HashMap<String, Object>();
@@ -799,7 +821,6 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         return "";
     }
 
-
     private void mergeModelApiInfo(List<Object> allModels, List<Object> allOperations) {
         Map<String, Map<String, Object>> modelMap = new HashMap<String, Map<String, Object>>();
         for (Object ms : allModels) {
@@ -807,8 +828,8 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
             if (!model.containsKey("model")) {
                 continue;
             }
-            String classname = ((CodegenModel)model.get("model")).classname;
-            modelMap.put(classname, model);
+            String modelname = ((CodegenModel)model.get("model")).name;
+            modelMap.put(modelname, model);
         }
         for (Object allItems : allOperations) {
             Map<String, Object> items = (Map<String, Object>)allItems;
@@ -823,26 +844,56 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
             for (CodegenOperation op : operation) {
                 String respBaseType = op.returnBaseType;
                 String reqBaseType = null;
+                String tagName = "default";
+
+                resetPathParams(op);
+                setOpPath(op);
+
                 if (op.bodyParam != null) {
-                    reqBaseType = op.bodyParam.baseType;
+                    if (op.bodyParam.isContainer == true){
+                        reqBaseType = op.bodyParam.baseType;
+                    } else{
+                        reqBaseType = op.bodyParam.baseName;
+                    }
                 }
                 LOGGER.info("respBaseType=" + respBaseType + ", reqBaseType=" + reqBaseType);
 
+                if(op.tags != null && op.tags.size() > 0) {
+                    tagName = op.tags.get(0).getName().toLowerCase();
+                }
+
+                String apiVersion = getVersionByPath(op.path.toString());
                 if (reqBaseType != null && modelMap.containsKey(reqBaseType)) {
+                    setTagsInfo(modelMap.get(reqBaseType), tagName, apiVersion, true, false);
                     modelMap.get(reqBaseType).put("isReq", true);
+                    modelMap.get(reqBaseType).put("apiVersion", apiVersion);
+                    modelMap.get(reqBaseType).put("classVarName", tagName);
 
                     if (op.bodyParam.vendorExtensions == null) {
                         op.bodyParam.vendorExtensions = new HashMap<String, Object>();
                     }
-                    if (reqBaseType.equals(op.bodyParam.dataType)) {
+                    if (config.toModelName(reqBaseType).equals(op.bodyParam.dataType)) {
                         op.bodyParam.vendorExtensions.put("x-reqbodyparammodel", true);
+                        modelMap.get(reqBaseType).put("isreqfirstmodel", true);
+                        modelMap.get(reqBaseType).put("nickname", op.nickname);
                     } else {
                         op.bodyParam.vendorExtensions.put("x-reqbodyparaminnermodel", true);
                     }
                 }
 
                 if (respBaseType != null && modelMap.containsKey(respBaseType)) {
+                    setTagsInfo(modelMap.get(respBaseType), tagName, apiVersion, false, true);
                     modelMap.get(respBaseType).put("isResp", true);
+                    modelMap.get(respBaseType).put("classVarName", tagName);
+                    modelMap.get(respBaseType).put("apiVersion", apiVersion);
+                    modelMap.get(respBaseType).put("nickname", op.nickname);
+
+                    if (op.returnContainer != null && op.returnContainer.equals("array")){
+                        op.vendorExtensions.put("isExtractInfo", true);
+                        op.vendorExtensions.put("returnBaseTypeModel", config.toModelName(respBaseType));
+                    } else {
+                        modelMap.get(respBaseType).put("isExtractInfo", true);
+                    }
 
                     if (op.vendorExtensions == null) {
                         op.vendorExtensions = new HashMap<String, Object>();
@@ -872,12 +923,12 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
             if (!model.containsKey("model")) {
                 continue;
             }
-            if (!model.containsKey("isResp") && !model.containsKey("isReq")) {
+            if (!model.containsKey("tagsInfo")) {
                     continue;
             }
             CodegenModel cm = (CodegenModel)model.get("model");
             for (CodegenProperty var : cm.vars) {
-                String complexType = setVarReqResp(var, model.containsKey("isReq"), model.containsKey("isResp"), modelMap);
+                String complexType = setVarReqResp(var, (List<Map<String, Object>>) model.get("tagsInfo"), modelMap);
                 if (var.isContainer && !complexType.isEmpty()) {
                     if (var.vendorExtensions == null) {
                         var.vendorExtensions = new HashMap<String, Object>();
@@ -955,6 +1006,121 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         return null;
     }
 
+    private void setTagsInfo(Map<String, Object> model, String tagName, String apiVersion, boolean isContainReq, boolean isContainResp){
+        List<Map<String, Object>> tagsInfo = new ArrayList<Map<String, Object>>();
+        // Only show once in request.go when both isContainReq and isContainResp are set to true
+        if (isContainReq == true && isContainResp == true){
+            isContainResp = false;
+        }
+
+        if (model.containsKey("tagsInfo")){
+            List<Map<String, Object>> oldTagsInfo = (List<Map<String, Object>>) model.get("tagsInfo");
+
+            for (int i = 0; i < oldTagsInfo.size(); i++){
+                Map<String, Object> oldTagInfo = oldTagsInfo.get(i);
+                String modelTagName = oldTagInfo.get("classVarName").toString();
+                String modelapiVersion = oldTagInfo.get("apiVersion").toString();
+                if (tagName.equals(modelTagName) && apiVersion.equals(modelapiVersion)){
+                    return;
+                }
+            }
+            tagsInfo.addAll(oldTagsInfo);
+        }
+
+        Map<String, Object> tagInfo = new HashMap<String, Object>();
+        if (isContainReq == true) {
+            tagInfo.put("isReq", true);
+        } else if (isContainResp == true){
+            tagInfo.put("isResp", true);
+        }
+
+        tagInfo.put("tagName", tagName);
+        tagInfo.put("apiVersion", apiVersion);
+        tagInfo.put("classVarName", tagName);
+        tagsInfo.add(tagInfo);
+        model.put("tagsInfo", tagsInfo);
+    }
+
+    private void resetPathParams(CodegenOperation op){
+        if (op.pathParams == null) {
+            return;
+        }
+
+        for (CodegenParameter p : op.pathParams) {
+            if (p.baseName.equals("project_id")) {
+                p.vendorExtensions.put("x-isProject", true);
+            }
+        }
+        return;
+    }
+
+    private void setOpPath(CodegenOperation op){
+        if (op.path == null) {
+            return;
+        }
+
+        String path = op.path.toLowerCase();
+        String version = getVersionByPath(path);
+        List<String> pathDetail = new ArrayList<String>();
+        String pattern = "\\{[\\w]+\\}";
+        boolean isMatch = false;
+
+        for (String p : path.split("/")) {
+            if (p.equals(version)){
+                continue;
+            }
+
+            if (p.equals("")){
+                continue;
+            }
+
+            isMatch = Pattern.matches(pattern, p);
+            if (isMatch == false) {
+                pathDetail.add(p);
+            }
+        }
+        LOGGER.info("############ zhongjun........############pathDetail=" + pathDetail);
+        for (int i = 0; i < pathDetail.size(); i++) {
+            if (i == 0) {
+                op.vendorExtensions.put("x-resourcePath", pathDetail.get(i));
+            } else if (i == 1) {
+                op.vendorExtensions.put("x-originPath", pathDetail.get(i));
+            } else {
+                break;
+            }
+        }
+        return;
+    }
+
+    private String getVersionByPath(String path) {
+        path = path.toLowerCase();
+        String pattern = "v?[0-9]+\\.?[0-9]*";
+        for (String p : path.split("/")) {
+            boolean isMatch = Pattern.matches(pattern, p);
+            if (isMatch == true) {
+                return p;
+            }
+        }
+        return "";
+    }
+
+    private void writeAllApiModelToFile(List<File> files, List<Object> allOperations, List<Object> allModels, Swagger swagger) {
+        List<Map<String, Object>> datas = config.writeApiModelToFile(files, allOperations, allModels, swagger);
+
+        try{
+            for (Map<String, Object> data : datas) {
+                File written = processTemplateToFile(
+                        data,
+                        data.get("templateName").toString(),
+                        data.get("filename").toString());
+                if (written != null) {
+                    files.add(written);
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Could not generate api file", e);
+        }
+    }
 
     private File processTemplateToFile(Map<String, Object> templateData, String templateName, String outputFilename) throws IOException {
         String adjustedOutputFilename = outputFilename.replaceAll("//", "/").replace('/', File.separatorChar);

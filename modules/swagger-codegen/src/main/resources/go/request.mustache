@@ -1,0 +1,133 @@
+{{>partial_header}}
+package {{classVarName}}
+
+{{#alloperations}}
+
+import (
+	"github.com/huaweicloud/golangsdk"{{#hasQueryPagin}}
+	"github.com/huaweicloud/golangsdk/pagination"{{/hasQueryPagin}}
+{{#operations}}
+{{#imports}}	"{{import}}"
+{{/imports}}
+)
+
+{{#operation}}
+{{#hasBodyParam}}
+{{#bodyParam.vendorExtensions.x-reqbodyparaminnermodel}}
+type {{{nickname}}}Opts {{#bodyParam.isListContainer}}{{#bodyParams}}{{#isContainer}}{{{dataType}}}{{/isContainer}}{{/bodyParams}}{{/bodyParam.isListContainer}}{{^bodyParam.isListContainer}} struct {
+{{#bodyParams}}
+	{{vendorExtensions.x-exportParamName}}{{name}} {{^isEnum}}{{^isPrimitiveType}}{{^isContainer}}{{^isDateTime}}*{{/isDateTime}}{{/isContainer}}{{/isPrimitiveType}}{{/isEnum}}{{{dataType}}} `json:"{{baseName}}{{^required}},omitempty{{/required}}"{{#required}} required:"true"{{/required}}`
+{{/bodyParams}}
+}{{/bodyParam.isListContainer}}
+{{/bodyParam.vendorExtensions.x-reqbodyparaminnermodel}}
+{{/hasBodyParam}}
+{{#hasQueryParams}}
+type {{{nickname}}}Opts struct {
+{{#queryParams}}
+{{#description}}
+	// {{{description}}}
+{{/description}}
+	{{vendorExtensions.x-exportParamName}} {{{dataType}}} `q:"{{baseName}}{{^required}},omitempty{{/required}}"{{#required}} required:"true"{{/required}}`
+{{/queryParams}}
+}
+
+{{/hasQueryParams}}
+{{/operation}}{{/operations}}{{/alloperations}}
+{{#allmodels}}{{#model}}{{#isReq}}
+{{#isEnum}}{{#description}}// {{{classname}}} : {{{description}}}{{/description}}
+type {{{classname}}} {{^format}}{{dataType}}{{/format}}{{#format}}{{{format}}}{{/format}}
+// List of {{{name}}}
+const (
+	{{#allowableValues}}
+	{{#enumVars}}
+	{{^-first}}
+	{{/-first}}
+	{{name}} {{{classname}}} = "{{{value}}}"
+	{{/enumVars}}
+	{{/allowableValues}}
+){{/isEnum}}{{^isEnum}}{{#description}}
+// {{{description}}}{{/description}}
+type {{^isreqfirstmodel}}{{classname}}{{/isreqfirstmodel}}{{#isreqfirstmodel}}{{{nickname}}}Opts{{/isreqfirstmodel}} struct {
+{{#vars}}
+{{^-first}}
+{{/-first}}
+{{#description}}
+	// {{{description}}}
+{{/description}}
+	{{name}} {{^isEnum}}{{^isPrimitiveType}}{{^isContainer}}{{^isDateTime}}*{{/isDateTime}}{{/isContainer}}{{/isPrimitiveType}}{{/isEnum}}{{{datatype}}} `json:"{{baseName}}{{^required}},omitempty{{/required}}"{{#withXml}} xml:"{{baseName}}"{{/withXml}}`
+{{/vars}}
+}{{/isEnum}}{{/isReq}}{{/model}}
+{{/allmodels}}
+{{#alloperations}}
+{{#operations}}
+{{#operation}}
+{{#hasParams}}
+{{#hasBodyParam}}
+{{#bodyParam.isListContainer}}
+func (opts {{{bodyParam.items.items.datatype}}}) ToMap() (map[string]interface{}, error) {
+	return golangsdk.BuildRequestBody(opts, "")
+}
+{{/bodyParam.isListContainer}}
+func (opts {{{nickname}}}Opts) To{{{nickname}}}Map() ({{#bodyParam.isListContainer}}[]{{/bodyParam.isListContainer}}map[string]interface{}, error) {
+    {{#bodyParam.isListContainer}}
+    newOpts := make([]map[string]interface{}, len(opts))
+    	for i, opt := range opts {
+    		opt, err := opt.ToMap()
+    		if err != nil {
+    			return nil, err
+    		}
+    		newOpts[i] = opt
+    	}
+    return newOpts, nil
+    {{/bodyParam.isListContainer}}
+    {{^bodyParam.isListContainer}}
+	return golangsdk.BuildRequestBody(opts, "")
+	{{/bodyParam.isListContainer}}
+}
+{{/hasBodyParam}}
+{{/hasParams}}
+{{/operation}}{{/operations}}{{/alloperations}}
+{{#alloperations}}
+{{#operations}}
+{{#operation}}
+{{#hasParams}}
+{{#hasBodyParam}}
+type {{{nickname}}}OptsBuilder interface {
+	To{{{nickname}}}Map() ({{#bodyParam.isListContainer}}[]{{/bodyParam.isListContainer}}map[string]interface{}, error)
+}
+
+{{/hasBodyParam}}
+{{/hasParams}}
+{{/operation}}{{/operations}}{{/alloperations}}
+{{#alloperations}}
+{{#operations}}
+{{#operation}}
+func {{{nickname}}}Func(client *golangsdk.ServiceClient{{#hasPathParams}}{{#pathParams}}{{^vendorExtensions.x-isProject}}, {{{paramName}}} {{{dataType}}}{{/vendorExtensions.x-isProject}}{{/pathParams}}{{/hasPathParams}}{{#hasQueryParams}}, opts {{{nickname}}}Opts{{/hasQueryParams}}{{#hasBodyParam}}, opts {{{nickname}}}OptsBuilder{{/hasBodyParam}}) {{^hasQueryParams}}(r {{{nickname}}}Result) {{/hasQueryParams}}{{#hasQueryParams}}pagination.Pager {{/hasQueryParams}}{
+{{#hasQueryParams}}
+    q, err := golangsdk.BuildQueryString(&opts)
+    if err != nil {
+        return pagination.Pager{Err: err}
+    }
+    url := {{{nickname}}}URL(client) + q.String()
+    return pagination.NewPager(client, url, func(r pagination.PageResult) pagination.Page {
+        return {{{nickname}}}Page{pagination.LinkedPageBase{PageResult: r}}
+    })
+
+{{/hasQueryParams}}
+{{#hasBodyParam}}
+    b, err := opts.To{{{nickname}}}Map()
+    if err != nil {
+        r.Err = err
+        return
+    }
+
+{{/hasBodyParam}}
+{{^hasQueryParams}}
+    _, r.Err = client.{{httpMethod}}({{{nickname}}}URL(client{{#hasPathParams}}{{#pathParams}}{{^vendorExtensions.x-isProject}}, {{{paramName}}}{{/vendorExtensions.x-isProject}}{{/pathParams}}{{/hasPathParams}}){{#hasBodyParam}}, b{{/hasBodyParam}}{{^vendorExtensions.x-is-delete-method}}, &r.Body{{/vendorExtensions.x-is-delete-method}}, &golangsdk.RequestOpts{
+        OkCodes: []int{{#responses}}{{#isDefault}}{{=<% %>=}}{<% code %>}<%={{ }}=%>{{/isDefault}}{{/responses}},
+    })
+
+    return
+{{/hasQueryParams}}
+}
+{{/operation}}{{/operations}}{{/alloperations}}
