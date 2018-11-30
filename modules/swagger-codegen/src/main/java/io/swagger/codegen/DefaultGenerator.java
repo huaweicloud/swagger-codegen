@@ -19,6 +19,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class DefaultGenerator extends AbstractGenerator implements Generator {
     protected final Logger LOGGER = LoggerFactory.getLogger(DefaultGenerator.class);
@@ -416,13 +418,13 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                     }
                     */
                 }
-                if (generateModelTests) {
+                /*if (generateModelTests) {
                     generateModelTests(files, models, modelName);
                 }
                 if (generateModelDocumentation) {
                     // to generate model documentation files
                     generateModelDocumentation(files, models, modelName);
-                }
+                }*/
             } catch (Exception e) {
                 throw new RuntimeException("Could not generate model '" + modelName + "'", e);
             }
@@ -513,7 +515,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                 }
                 */
 
-                if (generateApiTests) {
+                /*if (generateApiTests) {
                     // to generate api test files
                     for (String templateName : config.apiTestTemplateFiles().keySet()) {
                         String filename = config.apiTestFilename(templateName, tag);
@@ -528,10 +530,10 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                             files.add(written);
                         }
                     }
-                }
+                }*/
 
 
-                if (generateApiDocumentation) {
+                /*if (generateApiDocumentation) {
                     // to generate api documentation files
                     for (String templateName : config.apiDocTemplateFiles().keySet()) {
                         String filename = config.apiDocFilename(templateName, tag);
@@ -545,7 +547,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                             files.add(written);
                         }
                     }
-                }
+                }*/
 
             } catch (Exception e) {
                 throw new RuntimeException("Could not generate api file for '" + tag + "'", e);
@@ -757,16 +759,97 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         generateApis(files, allOperations, allModels);
 
         mergeModelApiInfo(allModels, allOperations);
-        files.add(writeModelFile(allModels, swagger.getHost(), swagger.getInfo().getVersion()));
-        files.add(writeApiFile(allOperations, swagger.getHost(), swagger.getBasePath(), swagger.getInfo().getVersion()));
+
+        String apiVersion = getApiVersion(allOperations);
+
+        handleOperations(allOperations, apiVersion);
+
+        files.add(writeModelFile(allModels, swagger.getInfo().getTitle(), apiVersion));
+        files.add(writeApiFile(allOperations, swagger.getInfo().getTitle(), apiVersion));
+        writePackageFile(files, swagger.getInfo().getTitle(), apiVersion);
 
         // supporting files
-        Map<String, Object> bundle = buildSupportFileBundle(allOperations, allModels);
+        /*Map<String, Object> bundle = buildSupportFileBundle(allOperations, allModels);
         generateSupportingFiles(files, bundle);
-        config.processSwagger(swagger);
+        config.processSwagger(swagger);*/
         return files;
     }
 
+    private String getVersionByPath(String path) {
+        path = path.toLowerCase();
+        String pattern = "v?[0-9]+\\.?[0-9]*";
+        for (String p : path.split("/")) {
+            boolean isMatch = Pattern.matches(pattern, p);
+            if (isMatch == true) {
+                return p;
+            }
+        }
+        return "";
+    }
+
+    private String getApiVersion(List<Object> allOperations) {
+        List<String> allApiVersions = new ArrayList<String>();
+        for (Object allItems : allOperations) {
+            Map<String, Object> item = (Map<String, Object>) allItems;
+            if (!item.containsKey("operations")) {
+                continue;
+            }
+            Map<String, Object> operations = (Map<String, Object>) item.get("operations");
+            if (!operations.containsKey("operation")) {
+                continue;
+            }
+            List<CodegenOperation> operation = (List<CodegenOperation>) operations.get("operation");
+            for (CodegenOperation op : operation) {
+                if (op.path == null) {
+                    continue;
+                }
+                String opVersion = getVersionByPath(op.path);
+                if (!opVersion.isEmpty() && (!allApiVersions.contains(opVersion))) {
+                    allApiVersions.add(opVersion);
+                }
+                LOGGER.info("Get API Version: " + opVersion);
+                return opVersion;
+            }
+        }
+        return "";
+    }
+
+    private void handleOperations(List<Object> allOperations, String apiVersion) {
+        for (Object allItems : allOperations) {
+            Map<String, Object> items = (Map<String, Object>) allItems;
+            if (!items.containsKey("operations")) {
+                continue;
+            }
+            Map<String, Object> operations = (Map<String, Object>) items.get("operations");
+            if (!operations.containsKey("operation")) {
+                continue;
+            }
+            List<CodegenOperation> operation = (List<CodegenOperation>) operations.get("operation");
+            for (CodegenOperation op : operation) {
+                LOGGER.info("############ Path ############"+ op.path);
+                op.path = op.path.replace("/" + apiVersion, "").replace("/{tenant_id}", "").replace("/{project_id}", "");
+
+                List<CodegenParameter> newPathParams = new ArrayList<>();
+                for (CodegenParameter param : op.pathParams) {
+                    if ((!param.paramName.equals("tenant_id")) && (!param.paramName.equals("project_id"))) {
+                        LOGGER.info("############ PathParamName ############"+ param.paramName);
+                        newPathParams.add(param);
+                    }
+                }
+                op.pathParams = newPathParams;
+
+				
+                List<CodegenParameter> newAllParams = new ArrayList<>();
+                for (CodegenParameter param : op.allParams) {
+                    if ((!param.paramName.equals("tenant_id")) && (!param.paramName.equals("project_id"))) {
+                        LOGGER.info("############ ALLParamName ############"+ param.paramName);
+                        newAllParams.add(param);
+                    }
+                }
+                op.allParams = newAllParams;
+            }
+        }
+    }
 
     private String setVarReqResp(CodegenProperty var, boolean isReq, boolean isResp, Map<String, Map<String, Object>> modelMap) {
         if (var.isContainer) {
@@ -889,7 +972,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
     }
 
 
-    private File writeModelFile(List<Object> allModels, String serviceCategory, String version) {
+    private File writeModelFile(List<Object> allModels, String serviceType, String version) {
         if (System.getProperty("debugModels") != null) {
             LOGGER.info("############ New Model info ############");
             Json.prettyPrint(allModels);
@@ -902,7 +985,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
             }
             for (String templateName : config.modelTemplateFiles().keySet()) {
                 String suffix = config.modelTemplateFiles().get(templateName);
-                String filename = config.apiFileFolder() + File.separator + serviceCategory + File.separator + version + File.separator + "models" + suffix;
+                String filename = config.getOutputDir() + File.separator + serviceType + File.separator + version + File.separator + "models" + suffix;
                 if (!config.shouldOverwrite(filename)) {
                     LOGGER.info("Skipped overwriting " + filename);
                 } else {
@@ -921,7 +1004,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
     }
 
 
-    private File writeApiFile(List<Object> allOperations, String serviceCategory, String serviceType, String version) {
+    private File writeApiFile(List<Object> allOperations, String serviceType, String version) {
         if (System.getProperty("debugOperations") != null) {
             LOGGER.info("############ New Operation info ############");
             Json.prettyPrint(allOperations);
@@ -931,17 +1014,18 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
             version = version.replaceAll("[.]", "_");
             if (!version.startsWith("v")) {
                 version = "v" + version;
-            }
+            }    
+            
             for (String templateName : config.apiTemplateFiles().keySet()) {
                 String suffix = config.apiTemplateFiles().get(templateName);
-                String filename = config.apiFileFolder() + File.separator + serviceCategory + File.separator + version + File.separator + "api" + suffix;
+                String filename = config.getOutputDir() + File.separator + serviceType + File.separator + version + File.separator + "api" + suffix;
                 if (!config.shouldOverwrite(filename) && new File(filename).exists()) {
                     LOGGER.info("Skipped overwriting " + filename);
                     continue;
                 }
                 Map<String, Object> templateParam = new HashMap<String, Object>();
                 templateParam.put("alloperations", allOperations);
-                templateParam.put("serviceCategory", serviceCategory);
+                //templateParam.put("serviceCategory", serviceCategory);
                 templateParam.put("serviceType", serviceType);
                 templateParam.put("version", version);
                 File written = processTemplateToFile(templateParam, templateName, filename);
@@ -953,6 +1037,26 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
             throw new RuntimeException("Could not generate api file", e);
         }
         return null;
+    }
+
+    private void writePackageFile(List<File> files, String serviceType, String version) {
+
+        try {
+            version = version.replaceAll("[.]", "_");
+            if (!version.startsWith("v")) {
+                version = "v" + version;
+            }
+            String servicePackage = config.getOutputDir() + File.separator + serviceType + File.separator  + "__init__.py";
+            String versionPackage = config.getOutputDir() + File.separator + serviceType + File.separator + version + File.separator + "__init__.py";
+
+            writeToFile(servicePackage, "");
+            files.add(new File(servicePackage));
+
+            writeToFile(versionPackage, "");
+            files.add(new File(versionPackage));
+        } catch (Exception e) {
+            throw new RuntimeException("Could not generate api file", e);
+        }
     }
 
 

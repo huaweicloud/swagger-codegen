@@ -52,6 +52,7 @@ public class PythonClientCodegen extends DefaultCodegen implements CodegenConfig
 
         modelTemplateFiles.put("models.mustache", ".py");
         apiTemplateFiles.put("apis.mustache", ".py");
+        //apiTemplateFiles.put("__init__packages.mustache", "__init__.py")
 
         modelTestTemplateFiles.put("model_test.mustache", ".py");
         apiTestTemplateFiles.put("api_test.mustache", ".py");
