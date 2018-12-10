@@ -5,9 +5,13 @@ import io.swagger.models.properties.ArrayProperty;
 import io.swagger.models.properties.MapProperty;
 import io.swagger.models.properties.Property;
 import io.swagger.models.parameters.Parameter;
+import io.swagger.models.Swagger;
+import io.swagger.models.Tag;
 
 import java.io.File;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -25,8 +29,10 @@ public class GoClientCodegen extends AbstractGoCodegen {
         super();
 
         outputFolder = "generated-code/go";
-        modelTemplateFiles.put("model.mustache", ".go");
-        apiTemplateFiles.put("api.mustache", ".go");
+        modelTemplateFiles.put("results.mustache", ".go");
+        apiTemplateFiles.put("request.mustache", ".go");
+        apiTemplateFiles.put("urls.mustache", ".go");
+        apiTemplateFiles.put("results.mustache", ".go");
 
         modelDocTemplateFiles.put("model_doc.mustache", ".md");
         apiDocTemplateFiles.put("api_doc.mustache", ".md");
@@ -171,5 +177,180 @@ public class GoClientCodegen extends AbstractGoCodegen {
     public void setPackageVersion(String packageVersion) {
         this.packageVersion = packageVersion;
     }
+
+    @Override
+    public List<Map<String, Object>> writeApiModelToFile(List<File> files, List<Object> allOperations, List<Object> allModels, Swagger swagger)
+    {
+
+        String serviceType = swagger.getInfo().getTitle();
+        String version = swagger.getInfo().getVersion();
+        List<Tag> swaggerTags = swagger.getTags();
+        List<Map<String, Object>> output = new ArrayList<>();
+        try {
+            version = version.replaceAll("[.]", "_");
+            if (!version.startsWith("v")) {
+                version = "v" + version;
+            }
+
+            serviceType = serviceType.toLowerCase();
+            for (String templateName : apiTemplateFiles().keySet()) {
+                String suffix = apiTemplateFiles().get(templateName);
+                for (Tag tag : swaggerTags) {
+                    String tagName = tag.getName().toLowerCase();
+                    List<String> allApiVersions = getAllApiVersions(allOperations);
+                    for (String apiVersion : allApiVersions) {
+                        List<Object> allTmpOperations = getOpTmpDataByTagApiVersion(allOperations, tagName, apiVersion);
+                        List<Object> allTmpModels = getModelTmpDataByTagApiVersion(allModels, tagName, apiVersion);
+
+                        if (allTmpOperations.isEmpty()) {
+                            continue;
+                        }
+
+                        Map<String, Object> templateParam = new HashMap<String, Object>();
+                        templateParam.put("classVarName", tagName);
+                        templateParam.put("allmodels", allTmpModels);
+                        templateParam.put("alloperations", allTmpOperations);
+
+                        String preName = templateName.split("\\.")[0];
+                        // eg: /tmp/1_0_0/compute/v1/instance/request.go
+                        String filename = (apiFileFolder() + version + File.separator + serviceType + File.separator
+                                + apiVersion + File.separator + tag.getName() + File.separator + preName + suffix);
+                        if (!super.shouldOverwrite(filename) && new File(filename).exists()) {
+                            LOGGER.info("Skipped overwriting " + filename);
+                            continue;
+                        }
+                        templateParam.put("templateName", templateName);
+                        templateParam.put("filename", filename);
+                        output.add(templateParam);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Could not generate api file", e);
+        }
+        return output;
+    }
+
+    private List<String> getAllApiVersions(List<Object> allOperations){
+        List<String> allApiVersions = new ArrayList<String>();
+        for (Object allItems : allOperations) {
+            Map<String, Object> item = (Map<String, Object>) allItems;
+            if (!item.containsKey("operations")) {
+                continue;
+            }
+            Map<String, Object> operations = (Map<String, Object>) item.get("operations");
+            if (!operations.containsKey("operation")) {
+                continue;
+            }
+            List<CodegenOperation> operation = (List<CodegenOperation>) operations.get("operation");
+            for (CodegenOperation op : operation) {
+                if (op.path == null) {
+                    continue;
+                }
+                String opVersion = getVersionByPath(op.path.toString());
+                if (!opVersion.isEmpty() && (!allApiVersions.contains(opVersion))) {
+                    allApiVersions.add(opVersion);
+                }
+            }
+        }
+        return  allApiVersions;
+    }
+
+    private String getVersionByPath(String path) {
+        path = path.toLowerCase();
+        String pattern = "v?[0-9]+\\.?[0-9]*";
+        for (String p : path.split("/")) {
+            boolean isMatch = Pattern.matches(pattern, p);
+            if (isMatch == true) {
+                return p;
+            }
+        }
+        return "";
+    }
+
+    private List<Object> getModelTmpDataByTagApiVersion(List<Object> allModels, String tagName, String apiVersion){
+        List<Object> allTmpModels = new ArrayList<Object>();
+        for (int i = 0; i < allModels.size(); i++) {
+            Map<String, Object> model = (Map<String, Object>) allModels.get(i);
+            if (!model.containsKey("tagsInfo")) {
+                continue;
+            }
+            List<Object> tagsInfo = (List<Object>) model.get("tagsInfo");
+            for (int iInfo = 0; iInfo < tagsInfo.size(); iInfo++) {
+                Map<String, Object> tagInfo = (Map<String, Object>) tagsInfo.get(iInfo);
+                if (!tagInfo.containsKey("classVarName") || !tagInfo.containsKey("apiVersion")) {
+                    continue;
+                }
+                String modelTagName = tagInfo.get("classVarName").toString();
+                String modelapiVersion = tagInfo.get("apiVersion").toString();
+
+                if (tagName.equals(modelTagName) && apiVersion.equals(modelapiVersion)) {
+                    if (tagInfo.containsKey("isReq") && (boolean) tagInfo.get("isReq")) {
+                        model.put("isReq", tagInfo.get("isReq"));
+                    } else{
+                        model.put("isReq", false);
+                    }
+
+                    if (tagInfo.containsKey("isResp") && (boolean) tagInfo.get("isResp")) {
+                        model.put("isResp", tagInfo.get("isResp"));
+                    } else{
+                        model.put("isResp", false);
+                    }
+
+                    allTmpModels.add(model);
+                    break;
+                }
+            }
+        }
+        return allTmpModels;
+    }
+
+    private List<Object> getOpTmpDataByTagApiVersion(List<Object> allOperations, String tagName, String apiVersion){
+        List<Object> allTmpOperations = new ArrayList<Object>();
+        String opTagName = "";
+        for (Object allItems : allOperations) {
+            boolean hasQueryParams = false;
+            Map<String, Object> item = (Map<String, Object>) allItems;
+            Map<String, Object> tmpItem = new HashMap<String, Object>();
+            Map<String, Object> tmpOperations = new HashMap<String, Object>();
+            if (!item.containsKey("operations")) {
+                continue;
+            }
+
+            Map<String, Object> operations = (Map<String, Object>) item.get("operations");
+            if (!operations.containsKey("operation")) {
+                continue;
+            }
+            List<CodegenOperation> operation = (List<CodegenOperation>) operations.get("operation");
+            List<CodegenOperation> tmpOperation = new ArrayList<CodegenOperation>();
+            for (CodegenOperation op : operation) {
+                if (op.path == null) {
+                    continue;
+                }
+
+                String opVersion = getVersionByPath(op.path.toString());
+                if (apiVersion.equals(opVersion)) {
+                    tmpOperation.add(op);
+                }
+                if (op.queryParams.size() > 0) {
+                    hasQueryParams = true;
+                }
+            }
+            tmpOperations.put("operation", tmpOperation);
+            tmpItem.put("operations", tmpOperations);
+            if (hasQueryParams == true){
+                tmpItem.put("hasQueryPagin", true);
+            }
+
+            opTagName = item.get("classVarName").toString();
+
+            if (tagName.equals(opTagName) && !tmpOperation.isEmpty()) {
+                allTmpOperations.add(tmpItem);
+            }
+        }
+
+        return  allTmpOperations;
+    }
+
 
 }

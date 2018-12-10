@@ -3898,4 +3898,10 @@ public class DefaultCodegen {
         }
         codegenOperation.testPath = path;
     }
+
+    public List<Map<String, Object>> writeApiModelToFile(List<File> files, List<Object> allOperations, List<Object> allModels, Swagger swagger)
+    {
+        List<Map<String, Object>> output = new ArrayList<>();
+        return output;
+    }
 }

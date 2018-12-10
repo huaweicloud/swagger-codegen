@@ -3,6 +3,7 @@ package io.swagger.codegen;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.io.File;
 
 import com.samskivert.mustache.Mustache.Compiler;
 
@@ -222,4 +223,5 @@ public interface CodegenConfig {
 
     String sanitizeName(String name);
 
+    List<Map<String, Object>> writeApiModelToFile(List<File> files, List<Object> allOperations, List<Object> allModels, Swagger swagger);
 }

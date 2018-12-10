@@ -1,0 +1,114 @@
+{{>partial_header}}
+package {{classVarName}}
+
+import (
+	"github.com/huaweicloud/golangsdk"
+    {{#alloperations}}{{#hasQueryPagin}}"github.com/huaweicloud/golangsdk/pagination"{{/hasQueryPagin}}{{/alloperations}}
+)
+
+
+
+type commonResult struct {
+	golangsdk.Result
+}
+
+{{#imports}}
+import ({{/imports}}{{#imports}}
+	"{{import}}"{{/imports}}{{#imports}}
+)
+{{/imports}}
+{{#allmodels}}{{#model}}{{#isResp}}{{#isEnum}}{{#description}}// {{{classname}}} : {{{description}}}{{/description}}
+type {{{classname}}} {{^format}}{{dataType}}{{/format}}{{#format}}{{{format}}}{{/format}}
+
+// List of {{{name}}}
+const (
+	{{#allowableValues}}
+	{{#enumVars}}
+	{{^-first}}
+	{{/-first}}
+	{{name}} {{{classname}}} = "{{{value}}}"
+	{{/enumVars}}
+	{{/allowableValues}}
+){{/isEnum}}{{^isEnum}}{{#description}}
+// {{{description}}}{{/description}}
+type {{classname}} struct {
+{{#vars}}
+{{^-first}}
+{{/-first}}
+{{#description}}
+	// {{{description}}}
+{{/description}}
+	{{name}} {{^isEnum}}{{^isPrimitiveType}}{{^isContainer}}{{^isDateTime}}*{{/isDateTime}}{{/isContainer}}{{/isPrimitiveType}}{{/isEnum}}{{{datatype}}} `json:"{{baseName}}{{^required}},omitempty{{/required}}"{{#withXml}} xml:"{{baseName}}"{{/withXml}}`
+{{/vars}}
+}{{/isEnum}}
+
+{{/isResp}}
+{{/model}}
+{{/allmodels}}
+
+{{#alloperations}}
+{{#operations}}{{#operation}}{{#isListContainer}}
+type {{{vendorExtensions.returnBaseTypeModel}}}s {{{returnType}}}
+
+{{/isListContainer}}
+{{#hasQueryParams}}
+func Extract{{nickname}}(r pagination.Page) ({{^isListContainer}}{{{returnType}}}{{/isListContainer}}{{#isListContainer}}{{{vendorExtensions.returnBaseTypeModel}}}s{{/isListContainer}}, error) {
+	var s {{^isListContainer}}{{{returnType}}}{{/isListContainer}}{{#isListContainer}}{{{vendorExtensions.returnBaseTypeModel}}}s{{/isListContainer}}
+	err := (r.({{nickname}}Page)).ExtractInto(&s)
+	return s, err
+}
+
+type {{nickname}}Page struct {
+	pagination.LinkedPageBase
+}
+
+func (r {{nickname}}Page) IsEmpty() (bool, error) {
+	s, err := Extract{{nickname}}(r)
+{{^vendorExtensions.isExtractInfo}}
+	return &s == nil, err
+{{/vendorExtensions.isExtractInfo}}
+{{#vendorExtensions.isExtractInfo}}
+	return len(s) == 0, err
+{{/vendorExtensions.isExtractInfo}}
+}
+
+{{/hasQueryParams}}
+{{^hasQueryParams}}
+type {{nickname}}Result struct {
+	commonResult
+}
+{{/hasQueryParams}}
+{{/operation}}{{/operations}}
+{{/alloperations}}
+{{#allmodels}}
+{{#model}}{{#isExtractInfo}}
+func (r commonResult) Extract{{classname}}Info() (*{{classname}}, error) {
+	var s {{classname}}
+	err := r.ExtractInto(&s)
+	return &s, err
+}
+
+{{/isExtractInfo}}{{/model}}
+{{/allmodels}}
+{{#alloperations}}
+{{#operations}}
+{{#operation}}
+{{#vendorExtensions.isExtractInfo}}
+{{^hasQueryParams}}
+func (r commonResult) Extract{{vendorExtensions.returnBaseTypeModel}}sInfo() (*{{vendorExtensions.returnBaseTypeModel}}s, error) {
+	var s {{vendorExtensions.returnBaseTypeModel}}s
+	err := r.ExtractInto(&s)
+	return &s, err
+}
+
+{{/hasQueryParams}}
+{{#hasQueryParams}}
+func Extract{{{nickname}}}(r pagination.Page) ({{vendorExtensions.returnBaseTypeModel}}s, error) {
+	var s {{vendorExtensions.returnBaseTypeModel}}s
+	err := (r.({{{nickname}}}Page)).ExtractInto(&s)
+	return &s, err
+}
+
+{{/hasQueryParams}}
+{{/vendorExtensions.isExtractInfo}}
+{{/operation}}{{/operations}}{{/alloperations}}
