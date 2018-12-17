@@ -54,7 +54,7 @@ type {{^isreqfirstmodel}}{{classname}}{{/isreqfirstmodel}}{{#isreqfirstmodel}}{{
 {{#description}}
 	// {{{description}}}
 {{/description}}
-	{{name}} {{^isEnum}}{{^isPrimitiveType}}{{^isContainer}}{{^isDateTime}}*{{/isDateTime}}{{/isContainer}}{{/isPrimitiveType}}{{/isEnum}}{{{datatype}}} `json:"{{baseName}}{{^required}},omitempty{{/required}}"{{#withXml}} xml:"{{baseName}}"{{/withXml}}`
+	{{name}} {{#defaultValue}}{{#vendorExtensions.x-notEqualToJsonDefaultValue}}*{{/vendorExtensions.x-notEqualToJsonDefaultValue}}{{/defaultValue}}{{^isEnum}}{{^isPrimitiveType}}{{^isContainer}}{{^isDateTime}}*{{/isDateTime}}{{/isContainer}}{{/isPrimitiveType}}{{/isEnum}}{{{datatype}}} `json:"{{baseName}}{{^required}},omitempty{{/required}}"{{#withXml}} xml:"{{baseName}}"{{/withXml}}`
 {{/vars}}
 }{{/isEnum}}{{/isReq}}{{/model}}
 {{/allmodels}}
