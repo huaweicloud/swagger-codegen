@@ -770,10 +770,24 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         return files;
     }
 
+    private void setVarIsEqualToJsonDefaultValue(CodegenProperty var){
+        if (var.defaultValue == null) {
+            return;
+        }
+
+        if (var.isBoolean == true && var.defaultValue == "False") {
+            var.vendorExtensions.put("x-notEqualToJsonDefaultValue", true);
+        }
+    }
+
     private String setVarReqResp(CodegenProperty var, List<Map<String, Object>> tagsInfo, Map<String, Map<String, Object>> modelMap) {
         if (var.isContainer) {
             return setVarReqResp(var.items, tagsInfo, modelMap);
         }
+        if (var.complexType == null && var.defaultValue != null) {
+            setVarIsEqualToJsonDefaultValue(var);
+        }
+
         if (var.complexType != null) {
             if (modelMap.containsKey(var.complexType)) {
                 Map<String, Object> model = modelMap.get(var.complexType);
@@ -1079,7 +1093,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                 pathDetail.add(p);
             }
         }
-        LOGGER.info("############ zhongjun........############pathDetail=" + pathDetail);
+
         for (int i = 0; i < pathDetail.size(); i++) {
             if (i == 0) {
                 op.vendorExtensions.put("x-resourcePath", pathDetail.get(i));
