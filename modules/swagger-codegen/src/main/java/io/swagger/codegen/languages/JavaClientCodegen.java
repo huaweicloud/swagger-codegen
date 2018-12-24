@@ -7,6 +7,8 @@ import io.swagger.codegen.*;
 import io.swagger.codegen.languages.features.BeanValidationFeatures;
 import io.swagger.codegen.languages.features.GzipFeatures;
 import io.swagger.codegen.languages.features.PerformBeanValidationFeatures;
+import io.swagger.models.Swagger;
+import io.swagger.models.Tag;
 
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -609,6 +611,15 @@ public class JavaClientCodegen extends AbstractJavaCodegen
      */
     static boolean isJsonVendorMimeType(String mime) {
         return mime != null && JSON_VENDOR_MIME_PATTERN.matcher(mime).matches();
+    }
+
+    @Override
+    public List<Map<String, Object>> writeApiModelToFile(List<File> files, List<Object> allOperations, List<Object> allModels, Swagger swagger) {
+        String serviceType = swagger.getInfo().getTitle();
+        String version = swagger.getInfo().getVersion();
+        List<Tag> swaggerTags = swagger.getTags();
+        List<Map<String, Object>> output = new ArrayList<>();
+        return output;
     }
 
 }

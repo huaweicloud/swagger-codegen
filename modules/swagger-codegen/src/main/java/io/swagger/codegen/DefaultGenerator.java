@@ -127,9 +127,9 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
     private void configureGeneratorProperties() {
         // allows generating only models by specifying a CSV of models to generate, or empty for all
         // NOTE: Boolean.TRUE is required below rather than `true` because of JVM boxing constraints and type inference.
-        generateApis = System.getProperty(CodegenConstants.APIS) != null ? Boolean.TRUE : getGeneratorPropertyDefaultSwitch(CodegenConstants.APIS, null);
-        generateModels = System.getProperty(CodegenConstants.MODELS) != null ? Boolean.TRUE : getGeneratorPropertyDefaultSwitch(CodegenConstants.MODELS, null);
-        generateSupportingFiles = System.getProperty(CodegenConstants.SUPPORTING_FILES) != null ? Boolean.TRUE : getGeneratorPropertyDefaultSwitch(CodegenConstants.SUPPORTING_FILES, null);
+        generateApis = System.getProperty(CodegenConstants.APIS) != null ? Boolean.TRUE : getGeneratorPropertyDefaultSwitch(CodegenConstants.APIS, true);
+        generateModels = System.getProperty(CodegenConstants.MODELS) != null ? Boolean.TRUE : getGeneratorPropertyDefaultSwitch(CodegenConstants.MODELS, true);
+        generateSupportingFiles = System.getProperty(CodegenConstants.SUPPORTING_FILES) != null ? Boolean.TRUE : getGeneratorPropertyDefaultSwitch(CodegenConstants.SUPPORTING_FILES, false);
 
         if (generateApis == null && generateModels == null && generateSupportingFiles == null) {
             // no specifics are set, generate everything
@@ -147,10 +147,10 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         }
         // model/api tests and documentation options rely on parent generate options (api or model) and no other options.
         // They default to true in all scenarios and can only be marked false explicitly
-        generateModelTests = System.getProperty(CodegenConstants.MODEL_TESTS) != null ? Boolean.valueOf(System.getProperty(CodegenConstants.MODEL_TESTS)) : getGeneratorPropertyDefaultSwitch(CodegenConstants.MODEL_TESTS, true);
-        generateModelDocumentation = System.getProperty(CodegenConstants.MODEL_DOCS) != null ? Boolean.valueOf(System.getProperty(CodegenConstants.MODEL_DOCS)) : getGeneratorPropertyDefaultSwitch(CodegenConstants.MODEL_DOCS, true);
-        generateApiTests = System.getProperty(CodegenConstants.API_TESTS) != null ? Boolean.valueOf(System.getProperty(CodegenConstants.API_TESTS)) : getGeneratorPropertyDefaultSwitch(CodegenConstants.API_TESTS, true);
-        generateApiDocumentation = System.getProperty(CodegenConstants.API_DOCS) != null ? Boolean.valueOf(System.getProperty(CodegenConstants.API_DOCS)) : getGeneratorPropertyDefaultSwitch(CodegenConstants.API_DOCS, true);
+        generateModelTests = System.getProperty(CodegenConstants.MODEL_TESTS) != null ? Boolean.valueOf(System.getProperty(CodegenConstants.MODEL_TESTS)) : getGeneratorPropertyDefaultSwitch(CodegenConstants.MODEL_TESTS, false);
+        generateModelDocumentation = System.getProperty(CodegenConstants.MODEL_DOCS) != null ? Boolean.valueOf(System.getProperty(CodegenConstants.MODEL_DOCS)) : getGeneratorPropertyDefaultSwitch(CodegenConstants.MODEL_DOCS, false);
+        generateApiTests = System.getProperty(CodegenConstants.API_TESTS) != null ? Boolean.valueOf(System.getProperty(CodegenConstants.API_TESTS)) : getGeneratorPropertyDefaultSwitch(CodegenConstants.API_TESTS, false);
+        generateApiDocumentation = System.getProperty(CodegenConstants.API_DOCS) != null ? Boolean.valueOf(System.getProperty(CodegenConstants.API_DOCS)) : getGeneratorPropertyDefaultSwitch(CodegenConstants.API_DOCS, false);
 
 
         // Additional properties added for tests to exclude references in project related files
@@ -759,8 +759,11 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         generateApis(files, allOperations, allModels);
 
         mergeModelApiInfo(allModels, allOperations);
-        files.add(writeModelFile(allModels, swagger.getHost(), swagger.getInfo().getVersion()));
-        files.add(writeApiFile(allOperations, swagger.getHost(), swagger.getBasePath(), swagger.getInfo().getVersion()));
+
+        // TODO: This section is used for python, we need to move this section to PythonClientCodegen.java
+        // files.add(writeModelFile(allModels, swagger.getHost(), swagger.getInfo().getVersion()));
+        // files.add(writeApiFile(allOperations, swagger.getHost(), swagger.getBasePath(), swagger.getInfo().getVersion()));
+
         writeAllApiModelToFile(files, allOperations, allModels, swagger);
 
         // supporting files
