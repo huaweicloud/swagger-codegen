@@ -1,25 +1,27 @@
-{{>partial_header}}
 package {{classVarName}}
 
 import (
-	"github.com/huaweicloud/golangsdk"
-    {{#alloperations}}{{#hasQueryPagin}}"github.com/huaweicloud/golangsdk/pagination"{{/hasQueryPagin}}{{/alloperations}}
+	"github.com/gophercloud/gophercloud"
+    {{#alloperations}}{{#hasQueryPagin}}"github.com/gophercloud/gophercloud/pagination"{{/hasQueryPagin}}{{/alloperations}}
 )
 
-
-
 type commonResult struct {
-	golangsdk.Result
+	gophercloud.Result
 }
-
 {{#imports}}
 import ({{/imports}}{{#imports}}
 	"{{import}}"{{/imports}}{{#imports}}
 )
 {{/imports}}
-{{#allmodels}}{{#model}}{{#isResp}}{{#isEnum}}{{#description}}// {{{classname}}} : {{{description}}}{{/description}}
-type {{{classname}}} {{^format}}{{dataType}}{{/format}}{{#format}}{{{format}}}{{/format}}
+{{#allmodels}}
+{{#model}}
+{{#isResp}}
+{{#isEnum}}
+{{#description}}
+    // {{{classname}}} : {{{description}}}
+{{/description}}
 
+type {{{classname}}} {{^format}}{{dataType}}{{/format}}{{#format}}{{{format}}}{{/format}}
 // List of {{{name}}}
 const (
 	{{#allowableValues}}
@@ -38,20 +40,22 @@ type {{classname}} struct {
 {{#description}}
 	// {{{description}}}
 {{/description}}
-	{{name}} {{^isEnum}}{{^isPrimitiveType}}{{^isContainer}}{{^isDateTime}}*{{/isDateTime}}{{/isContainer}}{{/isPrimitiveType}}{{/isEnum}}{{{datatype}}} `json:"{{baseName}}{{^required}},omitempty{{/required}}"{{#withXml}} xml:"{{baseName}}"{{/withXml}}`
+	{{name}} {{#defaultValue}}{{#vendorExtensions.x-notEqualToJsonDefaultValue}}*{{/vendorExtensions.x-notEqualToJsonDefaultValue}}{{/defaultValue}}{{{datatype}}} `json:"{{baseName}}{{^required}},omitempty{{/required}}"{{#withXml}} xml:"{{baseName}}"{{/withXml}}`
 {{/vars}}
-}{{/isEnum}}
-
+}
+{{/isEnum}}
 {{/isResp}}
 {{/model}}
 {{/allmodels}}
-
 {{#alloperations}}
-{{#operations}}{{#operation}}{{#isListContainer}}
-type {{{vendorExtensions.returnBaseTypeModel}}}s {{{returnType}}}
+{{#operations}}
+{{#operation}}
+{{#isListContainer}}
 
+type {{{vendorExtensions.returnBaseTypeModel}}}s {{{returnType}}}
 {{/isListContainer}}
 {{#hasQueryParams}}
+
 func Extract{{nickname}}(r pagination.Page) ({{^isListContainer}}{{{returnType}}}{{/isListContainer}}{{#isListContainer}}{{{vendorExtensions.returnBaseTypeModel}}}s{{/isListContainer}}, error) {
 	var s {{^isListContainer}}{{{returnType}}}{{/isListContainer}}{{#isListContainer}}{{{vendorExtensions.returnBaseTypeModel}}}s{{/isListContainer}}
 	err := (r.({{nickname}}Page)).ExtractInto(&s)
@@ -71,44 +75,49 @@ func (r {{nickname}}Page) IsEmpty() (bool, error) {
 	return len(s) == 0, err
 {{/vendorExtensions.isExtractInfo}}
 }
-
 {{/hasQueryParams}}
 {{^hasQueryParams}}
+
 type {{nickname}}Result struct {
 	commonResult
 }
 {{/hasQueryParams}}
-{{/operation}}{{/operations}}
+{{/operation}}
+{{/operations}}
 {{/alloperations}}
 {{#allmodels}}
-{{#model}}{{#isExtractInfo}}
+{{#model}}
+{{#isExtractInfo}}
+
 func (r commonResult) Extract{{classname}}Info() (*{{classname}}, error) {
 	var s {{classname}}
 	err := r.ExtractInto(&s)
 	return &s, err
 }
-
-{{/isExtractInfo}}{{/model}}
+{{/isExtractInfo}}
+{{/model}}
 {{/allmodels}}
 {{#alloperations}}
 {{#operations}}
 {{#operation}}
 {{#vendorExtensions.isExtractInfo}}
 {{^hasQueryParams}}
+
 func (r commonResult) Extract{{vendorExtensions.returnBaseTypeModel}}sInfo() (*{{vendorExtensions.returnBaseTypeModel}}s, error) {
 	var s {{vendorExtensions.returnBaseTypeModel}}s
 	err := r.ExtractInto(&s)
 	return &s, err
 }
-
 {{/hasQueryParams}}
 {{#hasQueryParams}}
+
 func Extract{{{nickname}}}(r pagination.Page) ({{vendorExtensions.returnBaseTypeModel}}s, error) {
 	var s {{vendorExtensions.returnBaseTypeModel}}s
 	err := (r.({{{nickname}}}Page)).ExtractInto(&s)
 	return &s, err
 }
-
 {{/hasQueryParams}}
 {{/vendorExtensions.isExtractInfo}}
-{{/operation}}{{/operations}}{{/alloperations}}
+{{/operation}}
+{{/operations}}
+{{/alloperations}}

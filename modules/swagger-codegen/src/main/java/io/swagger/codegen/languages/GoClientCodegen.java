@@ -14,6 +14,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import org.slf4j.Logger;
@@ -31,7 +32,7 @@ public class GoClientCodegen extends AbstractGoCodegen {
 
         outputFolder = "generated-code/go";
         modelTemplateFiles.put("results.mustache", ".go");
-        apiTemplateFiles.put("request.mustache", ".go");
+        apiTemplateFiles.put("requests.mustache", ".go");
         apiTemplateFiles.put("urls.mustache", ".go");
         apiTemplateFiles.put("results.mustache", ".go");
 
@@ -53,7 +54,7 @@ public class GoClientCodegen extends AbstractGoCodegen {
                 "break", "default", "func", "interface", "select",
                 "case", "defer", "go", "map", "struct",
                 "chan", "else", "goto", "package", "switch",
-                "const", "fallthrough", "if", "range", "type",
+                "const", "fallthrough", "if", "range",
                 "continue", "for", "import", "return", "var", "error", "ApiResponse", "nil")
                 // Added "error" as it's used so frequently that it may as well be a keyword
         );
@@ -62,6 +63,12 @@ public class GoClientCodegen extends AbstractGoCodegen {
                 .defaultValue("1.0.0"));
         cliOptions.add(CliOption.newBoolean(WITH_XML, "whether to include support for application/xml content type and include XML annotations in the model (works with libraries that provide support for JSON and XML)"));
 
+    }
+
+    @Override
+    public Map<String, String> typeMapping() {
+        typeMapping.put("integer", "int");
+        return typeMapping;
     }
 
     @Override
@@ -175,6 +182,31 @@ public class GoClientCodegen extends AbstractGoCodegen {
         return toApiName(name);
     }
 
+    // override with any special text escaping logic
+    @Override
+    public String escapeText(String input) {
+        if (input == null) {
+            return input;
+        }
+
+        if (input == "") {
+            return null;
+        }
+
+        // remove \t, \n, \r
+        // replace \ with \\
+        // replace " with \"
+        // outter unescape to retain the original multi-byte characters
+        // finally escalate characters avoiding code injection
+        return escapeUnsafeCharacters(
+                StringEscapeUtils.unescapeJava(
+                        StringEscapeUtils.escapeJava(input)
+                                .replace("\\/", "/"))
+                        .replaceAll("[\\t\\n\\r]"," ")
+                        .replace("\\", "\\\\")
+                        .replace("\"", "\\\""));
+    }
+
     /**
      * Return the default value of the property
      *
@@ -262,6 +294,8 @@ public class GoClientCodegen extends AbstractGoCodegen {
 
                         Map<String, Object> templateParam = new HashMap<String, Object>();
                         templateParam.put("classVarName", tagName);
+                        templateParam.put("serviceType", serviceType);
+                        templateParam.put("version", version);
                         templateParam.put("allmodels", allTmpModels);
                         templateParam.put("alloperations", allTmpOperations);
 
