@@ -724,6 +724,12 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                             Json.prettyPrint(allTmpModels);
                         }
 
+                        // get version
+                        String version = apiVersion.replaceAll("[.]", "_").replaceAll("[_0]", "");
+                        if (!apiVersion.startsWith("v")) {
+                            version = "v" + apiVersion;
+                        }
+
                         // generate files by models
                         for (Object tmpModel : allTmpModels) {
                             Map<String, Object> singleModel = (Map<String, Object>) tmpModel;
@@ -737,7 +743,7 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                             // eg: ListKeyPairResp
                             String classname = cm.classname;
                             // eg: com.huawei.openstack4j.openstack.csbs.v1.domain
-                            String packagename = modelPackage + "." + serviceType.toLowerCase() + "."
+                            String packagename = modelPackage + "." + serviceType.toLowerCase() + "." + version + "."
                                     + modelFixedFolderName;
 
                             Map<String, Object> templateParam = new HashMap<String, Object>();
@@ -751,8 +757,8 @@ public class JavaClientCodegen extends AbstractJavaCodegen
 
                             // eg: core/src/main/java/com/huawei/openstack4j/openstack/csbs/v1/domain/xx
                             String filename = (apiFileFolder() + File.separator + serviceType.toLowerCase()
-                                    + File.separator + apiVersion + File.separator + modelFixedFolderName
-                                    + File.separator + classname + suffix);
+                                    + File.separator + version + File.separator + modelFixedFolderName + File.separator
+                                    + classname + suffix);
 
                             templateParam.put("templateName", templateName);
                             templateParam.put("filename", filename);
@@ -762,6 +768,12 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                                 LOGGER.info("Skipped overwriting " + filename);
                                 continue;
                             }
+
+                            if (System.getProperty("debugSwagger") != null) {
+                                LOGGER.info("############ Template Param info ############");
+                                Json.prettyPrint(templateParam);
+                            }
+
                             output.add(templateParam);
                         }
                     }
@@ -785,20 +797,45 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                             continue;
                         }
 
+                        if (System.getProperty("debugSwagger") != null) {
+                            LOGGER.info("############ Operation info ############");
+                            Json.prettyPrint(allTmpOperations);
+
+                            LOGGER.info("############ Model info ############");
+                            Json.prettyPrint(allTmpModels);
+                        }
+
+                        // get version
+                        String version = apiVersion.replaceAll("[.]", "_").replaceAll("[_0]", "");
+                        if (!apiVersion.startsWith("v")) {
+                            version = "v" + apiVersion;
+                        }
+
+                        // eg: com.huawei.openstack4j.openstack.csbs.v1.internal
+                        String packagename = apiPackage + "." + serviceType.toLowerCase() + "." + version + "."
+                                + apiFixedFolderName;
+
                         Map<String, Object> templateParam = new HashMap<String, Object>();
                         templateParam.put("classVarName", tagName);
                         templateParam.put("allmodels", allTmpModels);
                         templateParam.put("alloperations", allTmpOperations);
                         templateParam.put("year", year);
+                        templateParam.put("packagename", packagename);
+
                         // eg: core/src/main/java/com/huawei/openstack4j/openstack/csbs/v1/internal/
                         String filename = (apiFileFolder() + File.separator + serviceType.toLowerCase() + File.separator
-                                + apiVersion + File.separator + apiFixedFolderName + File.separator + tagName + suffix);
+                                + version + File.separator + apiFixedFolderName + File.separator + tagName + suffix);
                         if (!super.shouldOverwrite(filename) && new File(filename).exists()) {
                             LOGGER.info("Skipped overwriting " + filename);
                             continue;
                         }
                         templateParam.put("templateName", templateName);
                         templateParam.put("filename", filename);
+
+                        if (System.getProperty("debugSwagger") != null) {
+                            LOGGER.info("############ Template Param info ############");
+                            Json.prettyPrint(templateParam);
+                        }
                         output.add(templateParam);
                     }
                 }

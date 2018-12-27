@@ -55,14 +55,18 @@ import com.huawei.openstack4j.model.ModelEntity;
 @NoArgsConstructor
 @AllArgsConstructor
 public class {{classname}} implements ModelEntity {
-	/**
-	 * serialVersionUID
-	 */
-	private static final long serialVersionUID = 1L;
+    /**
+     * serialVersionUID
+     */
+    private static final long serialVersionUID = 1L;
 
-
+    {{#vars}}
+    /**
+     * {{{description}}}
+     */
     @JsonProperty("{{baseName}}")
-    
+    private {{{datatypeWithEnum}}} {{name}};
+    {{/vars}}
 }
 {{/isEnum}}
 {{/model}}
