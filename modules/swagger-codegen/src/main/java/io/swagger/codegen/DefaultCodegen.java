@@ -3904,4 +3904,15 @@ public class DefaultCodegen {
         List<Map<String, Object>> output = new ArrayList<>();
         return output;
     }
+
+    public String getModelKey(Object o) {
+        String modelKey = null;
+        if (o != null) {
+            CodegenModel cm = (CodegenModel) o;
+            if (cm != null) {
+                modelKey = cm.name;
+            }
+        }
+        return modelKey;
+    }
 }

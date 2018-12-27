@@ -670,6 +670,19 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                         .replaceAll("[\\t\\n\\r]", " ").replace("\\", "\\\\").replace("\"", "\\\""));
     }
 
+    // override with model key
+    @Override
+    public String getModelKey(Object o) {
+        String modelKey = null;
+        if (o != null) {
+            CodegenModel cm = (CodegenModel) o;
+            if (cm != null) {
+                modelKey = cm.classname;
+            }
+        }
+        return modelKey;
+    }
+
     @Override
     public List<Map<String, Object>> writeApiModelToFile(List<File> files, List<Object> allOperations,
             List<Object> allModels, Swagger swagger) {

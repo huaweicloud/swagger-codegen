@@ -1,5 +1,6 @@
 package io.swagger.codegen;
 
+import com.google.common.base.Strings;
 import com.samskivert.mustache.Mustache;
 import com.samskivert.mustache.Template;
 import io.swagger.codegen.ignore.CodegenIgnoreProcessor;
@@ -845,8 +846,10 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
             if (!model.containsKey("model")) {
                 continue;
             }
-            String modelname = ((CodegenModel)model.get("model")).name;
-            modelMap.put(modelname, model);
+            String modelname = config.getModelKey(model.get("model"));
+            if (!Strings.isNullOrEmpty(modelname)) {
+                modelMap.put(modelname, model);
+            }
         }
         for (Object allItems : allOperations) {
             Map<String, Object> items = (Map<String, Object>)allItems;
