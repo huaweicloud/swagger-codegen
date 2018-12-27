@@ -1,4 +1,69 @@
 {{>licenseInfo}}
 
-package {{package}};
+package {{packagename}};
 
+{{#singlemodel}}
+{{#model}}
+{{#isEnum}}
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
+/**
+ * {{#description}}{{{description}}}{{/description}}
+ */
+public enum {{classname}} {
+
+    {{#allowableValues}}
+    {{#enumVars}}
+    {{{name}}}({{{value}}}){{^-last}},
+    {{/-last}}{{#-last}};{{/-last}}
+    {{/enumVars}}
+    {{/allowableValues}}
+
+    @JsonValue
+    public String value() {
+        return name();
+    }
+
+    @JsonCreator
+    public static {{classname}} value(String v)
+    {
+        try {
+            return valueOf(v);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+}
+{{/isEnum}}
+{{^isEnum}}
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.huawei.openstack4j.model.ModelEntity;
+
+/**
+ * {{#description}}{{{description}}}{{/description}}
+ */
+@Getter
+@ToString
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class {{classname}} implements ModelEntity {
+	/**
+	 * serialVersionUID
+	 */
+	private static final long serialVersionUID = 1L;
+
+
+    @JsonProperty("{{baseName}}")
+    
+}
+{{/isEnum}}
+{{/model}}
+{{/singlemodel}}

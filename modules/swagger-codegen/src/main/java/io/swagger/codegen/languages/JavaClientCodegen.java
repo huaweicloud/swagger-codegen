@@ -9,8 +9,10 @@ import io.swagger.codegen.languages.features.GzipFeatures;
 import io.swagger.codegen.languages.features.PerformBeanValidationFeatures;
 import io.swagger.models.Swagger;
 import io.swagger.models.Tag;
+import io.swagger.util.Json;
 
 import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,8 +57,8 @@ public class JavaClientCodegen extends AbstractJavaCodegen
     protected boolean useRuntimeException = false;
 
     // extesion definitions
-    protected String apiFixedFolderName = "domain";
-    protected String modelFixedFolderName = "internal";
+    protected String apiFixedFolderName = "internal";
+    protected String modelFixedFolderName = "domain";
 
     public JavaClientCodegen() {
         super();
@@ -74,8 +76,8 @@ public class JavaClientCodegen extends AbstractJavaCodegen
         apiPackage = "com.huawei.openstack4j.openstack";
         modelTemplateFiles.clear();
         apiTemplateFiles.clear();
-        modelTemplateFiles.put("extensionapi.mustache", ".java");
-        apiTemplateFiles.put("extensionmodel.mustache", ".java");
+        modelTemplateFiles.put("extensionmodel.mustache", ".java");
+        apiTemplateFiles.put("extensionapi.mustache", ".java");
 
         cliOptions.add(
                 CliOption.newBoolean(USE_RX_JAVA, "Whether to use the RxJava adapter with the retrofit2 library."));
@@ -647,12 +649,46 @@ public class JavaClientCodegen extends AbstractJavaCodegen
         return mime != null && JSON_VENDOR_MIME_PATTERN.matcher(mime).matches();
     }
 
+    // override with any special text escaping logic
+    @Override
+    public String escapeText(String input) {
+        if (input == null) {
+            return input;
+        }
+
+        if (input == "") {
+            return null;
+        }
+
+        // remove \t, \n, \r
+        // replace \ with \\
+        // replace " with \"
+        // outter unescape to retain the original multi-byte characters
+        // finally escalate characters avoiding code injection
+        return escapeUnsafeCharacters(
+                StringEscapeUtils.unescapeJava(StringEscapeUtils.escapeJava(input).replace("\\/", "/"))
+                        .replaceAll("[\\t\\n\\r]", " ").replace("\\", "\\\\").replace("\"", "\\\""));
+    }
+
     @Override
     public List<Map<String, Object>> writeApiModelToFile(List<File> files, List<Object> allOperations,
             List<Object> allModels, Swagger swagger) {
         String serviceType = swagger.getInfo().getTitle();
         List<Tag> swaggerTags = swagger.getTags();
         List<Map<String, Object>> output = new ArrayList<>();
+        int year = Calendar.getInstance().get(Calendar.YEAR);
+
+        if (System.getProperty("debugSwagger") != null) {
+            LOGGER.info("############ Swagger info ############");
+            Json.prettyPrint(swagger);
+
+            LOGGER.info("############ Operation info ############");
+            Json.prettyPrint(allOperations);
+
+            LOGGER.info("############ Model info ############");
+            Json.prettyPrint(allModels);
+        }
+
         try {
             for (String templateName : modelTemplateFiles().keySet()) {
                 String suffix = modelTemplateFiles().get(templateName);
@@ -667,22 +703,54 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                             continue;
                         }
 
-                        Map<String, Object> templateParam = new HashMap<String, Object>();
-                        templateParam.put("classVarName", tagName);
-                        templateParam.put("allmodels", allTmpModels);
-                        templateParam.put("alloperations", allTmpOperations);
+                        if (System.getProperty("debugSwagger") != null) {
+                            LOGGER.info("############ Operation info ############");
+                            Json.prettyPrint(allTmpOperations);
 
-                        // eg: core/src/main/java/com/huawei/openstack4j/openstack/csbs/v1/domain/
-                        String filename = (apiFileFolder() + File.separator + serviceType.toLowerCase() + File.separator
-                                + apiVersion + File.separator + modelFixedFolderName + File.separator + tagName
-                                + suffix);
-                        if (!super.shouldOverwrite(filename) && new File(filename).exists()) {
-                            LOGGER.info("Skipped overwriting " + filename);
-                            continue;
+                            LOGGER.info("############ Model info ############");
+                            Json.prettyPrint(allTmpModels);
                         }
-                        templateParam.put("templateName", templateName);
-                        templateParam.put("filename", filename);
-                        output.add(templateParam);
+
+                        // generate files by models
+                        for (Object tmpModel : allTmpModels) {
+                            Map<String, Object> singleModel = (Map<String, Object>) tmpModel;
+                            if (!singleModel.containsKey("model")) {
+                                continue;
+                            }
+                            CodegenModel cm = (CodegenModel) singleModel.get("model");
+                            if (cm == null) {
+                                continue;
+                            }
+                            // eg: ListKeyPairResp
+                            String classname = cm.classname;
+                            // eg: com.huawei.openstack4j.openstack.csbs.v1.domain
+                            String packagename = modelPackage + "." + serviceType.toLowerCase() + "."
+                                    + modelFixedFolderName;
+
+                            Map<String, Object> templateParam = new HashMap<String, Object>();
+                            templateParam.put("classVarName", tagName);
+                            templateParam.put("allmodels", allTmpModels);
+                            templateParam.put("alloperations", allTmpOperations);
+                            templateParam.put("year", year);
+                            templateParam.put("singlemodel", tmpModel);
+                            templateParam.put("classname", classname);
+                            templateParam.put("packagename", packagename);
+
+                            // eg: core/src/main/java/com/huawei/openstack4j/openstack/csbs/v1/domain/xx
+                            String filename = (apiFileFolder() + File.separator + serviceType.toLowerCase()
+                                    + File.separator + apiVersion + File.separator + modelFixedFolderName
+                                    + File.separator + classname + suffix);
+
+                            templateParam.put("templateName", templateName);
+                            templateParam.put("filename", filename);
+
+                            // skip overwriting
+                            if (!super.shouldOverwrite(filename) && new File(filename).exists()) {
+                                LOGGER.info("Skipped overwriting " + filename);
+                                continue;
+                            }
+                            output.add(templateParam);
+                        }
                     }
                 }
             }
@@ -708,7 +776,7 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                         templateParam.put("classVarName", tagName);
                         templateParam.put("allmodels", allTmpModels);
                         templateParam.put("alloperations", allTmpOperations);
-
+                        templateParam.put("year", year);
                         // eg: core/src/main/java/com/huawei/openstack4j/openstack/csbs/v1/internal/
                         String filename = (apiFileFolder() + File.separator + serviceType.toLowerCase() + File.separator
                                 + apiVersion + File.separator + apiFixedFolderName + File.separator + tagName + suffix);
