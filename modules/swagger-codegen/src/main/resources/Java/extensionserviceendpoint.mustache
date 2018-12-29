@@ -1,0 +1,7 @@
+{
+  {{#otherFiles}}
+  "{{serviceType}}":{
+  	"public": "https://{{serviceTypeLowerCase}}.%(region)s.%(domain)s/{{apiVersion}}/%(projectId)s"
+  }{{^-last}},{{/-last}}
+  {{/otherFiles}}
+}

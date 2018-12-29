@@ -63,6 +63,12 @@ public class JavaClientCodegen extends AbstractJavaCodegen
     protected String extensionApiBase = "extensionapibase.mustache";
     protected String extensionApi = "extensionapi.mustache";
     protected String extensionApiImpl = "extensionapiimpl.mustache";
+    protected Map<String, String> otherTemplateFiles = new HashMap<String, String>();
+    protected String extensionserviceendpoint = "extensionserviceendpoint.mustache";
+    protected String extensionservicetype = "extensionservicetype.mustache";
+    protected String extensionosclient = "extensionosclient.mustache";
+    protected String extensionosclientsession = "extensionosclientsession.mustache";
+    protected String extensiondefaultapiprovider = "extensiondefaultapiprovider.mustache";
 
     public JavaClientCodegen() {
         super();
@@ -80,10 +86,16 @@ public class JavaClientCodegen extends AbstractJavaCodegen
         apiPackage = "com.huawei.openstack4j.openstack";
         modelTemplateFiles.clear();
         apiTemplateFiles.clear();
+        otherTemplateFiles.clear();
         modelTemplateFiles.put(extensionModel, ".java");
         apiTemplateFiles.put(extensionApiBase, ".java");
         apiTemplateFiles.put(extensionApi, ".java");
         apiTemplateFiles.put(extensionApiImpl, ".java");
+        otherTemplateFiles.put(extensionserviceendpoint, ".json");
+        otherTemplateFiles.put(extensionservicetype, ".java");
+        otherTemplateFiles.put(extensionosclient, ".java");
+        otherTemplateFiles.put(extensionosclientsession, ".java");
+        otherTemplateFiles.put(extensiondefaultapiprovider, ".java");
 
         cliOptions.add(
                 CliOption.newBoolean(USE_RX_JAVA, "Whether to use the RxJava adapter with the retrofit2 library."));
@@ -696,6 +708,7 @@ public class JavaClientCodegen extends AbstractJavaCodegen
         List<Tag> swaggerTags = swagger.getTags();
         List<Map<String, Object>> output = new ArrayList<>();
         int year = Calendar.getInstance().get(Calendar.YEAR);
+        List<Map<String, Object>> otherFiles = new ArrayList<>();
 
         if (System.getProperty("debugSwagger") != null) {
             LOGGER.info("############ Swagger info ############");
@@ -826,6 +839,11 @@ public class JavaClientCodegen extends AbstractJavaCodegen
             List<String> allApiVersions = getAllApiVersions(allOperations);
             for (String apiVersion : allApiVersions) {
                 List<Map<String, Object>> apiImplClassNames = new ArrayList<>();
+                // get version
+                String version = apiVersion.replaceAll("[.]", "_").replaceAll("[_0]", "");
+                if (!apiVersion.startsWith("v")) {
+                    version = "v" + apiVersion;
+                }
                 for (Tag tag : swaggerTags) {
                     String tagName = tag.getName().toLowerCase();
                     List<Object> allTmpOperations = getOpTmpDataByTagApiVersion(allOperations, tagName, apiVersion);
@@ -835,12 +853,6 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                     }
 
                     String suffix = apiTemplateFiles().get(extensionApiImpl);
-
-                    // get version
-                    String version = apiVersion.replaceAll("[.]", "_").replaceAll("[_0]", "");
-                    if (!apiVersion.startsWith("v")) {
-                        version = "v" + apiVersion;
-                    }
 
                     // eg: com.huawei.openstack4j.openstack.csbs.v1.internal
                     String packagename = apiPackage + "." + serviceType.toLowerCase() + "." + version + "."
@@ -887,18 +899,14 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                     }
                 }
 
+                String importpackagename = null;
                 if (apiImplClassNames.size() > 0) {
                     String suffix = apiTemplateFiles().get(extensionApi);
-
-                    // get version
-                    String version = apiVersion.replaceAll("[.]", "_").replaceAll("[_0]", "");
-                    if (!apiVersion.startsWith("v")) {
-                        version = "v" + apiVersion;
-                    }
 
                     // eg: com.huawei.openstack4j.openstack.csbs.v1.internal
                     String packagename = apiPackage + "." + serviceType.toLowerCase() + "." + version + "."
                             + apiFixedFolderName;
+                    importpackagename = packagename;
 
                     Map<String, Object> templateParam = new HashMap<String, Object>();
                     templateParam.put("year", year);
@@ -919,9 +927,71 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                     templateParam.put("filename", filename);
                     output.add(templateParam);
                 }
+
+                // Fill with other files
+                Map<String, Object> ofs = new HashMap<String, Object>();
+                ofs.put("apiVersion", apiVersion);
+                ofs.put("version", version);
+                ofs.put("importpackagename", importpackagename);
+                ofs.put("apiBaseClassName", apiBaseClassName);
+                ofs.put("apiClassName", apiClassName);
+                ofs.put("apiImplClassNames", apiImplClassNames);
+                ofs.put("serviceType", serviceType);
+                ofs.put("serviceTypeUpperCase", serviceType.toUpperCase());
+                ofs.put("serviceTypeLowerCase", serviceType.toLowerCase());
+                otherFiles.add(ofs);
             }
         } catch (Exception e) {
             throw new RuntimeException("Could not generate api file", e);
+        }
+
+        try {
+            for (String templateName : otherTemplateFiles.keySet()) {
+                String suffix = otherTemplateFiles.get(templateName);
+                String filename = null;
+                if (templateName.equals(extensionserviceendpoint)) {
+                    // core/src/main/resources/service_endpoint.json
+                    filename = outputFolder + File.separator + projectFolder + File.separator + "resources"
+                            + File.separator + "service_endpoint.json";
+                } else if (templateName.equals(extensionservicetype)) {
+                    // core/src/main/java/com/huawei/openstack4j/api/types/ServiceType.java
+                    filename = outputFolder + File.separator + projectFolder + File.separator + "java" + File.separator
+                            + "com" + File.separator + "huawei" + File.separator + "openstack4j" + File.separator
+                            + "api" + File.separator + "types" + File.separator + "ServiceType.java";
+                } else if (templateName.equals(extensionosclient)) {
+                    // core/src/main/java/com/huawei/openstack4j/api/OSClient.java
+                    filename = outputFolder + File.separator + projectFolder + File.separator + "java" + File.separator
+                            + "com" + File.separator + "huawei" + File.separator + "openstack4j" + File.separator
+                            + "api" + File.separator + "OSClient.java";
+                } else if (templateName.equals(extensionosclientsession)) {
+                    // core/src/main/java/com/huawei/openstack4j/openstack/internal/OSClientSession.java
+                    filename = apiFileFolder() + File.separator + "internal" + File.separator + "OSClientSession.java";
+                } else if (templateName.equals(extensiondefaultapiprovider)) {
+                    // core/src/main/java/com/huawei/openstack4j/openstack/provider/DefaultAPIProvider.java
+                    filename = apiFileFolder() + File.separator + "provider" + File.separator
+                            + "DefaultAPIProvider.java";
+                }
+
+                if (filename != null) {
+                    if (!super.shouldOverwrite(filename) && new File(filename).exists()) {
+                        LOGGER.info("Skipped overwriting " + filename);
+                        continue;
+                    }
+                    Map<String, Object> templateParam = new HashMap<String, Object>();
+                    templateParam.put("year", year);
+                    templateParam.put("otherFiles", otherFiles);
+                    templateParam.put("templateName", templateName);
+                    templateParam.put("filename", filename);
+                    output.add(templateParam);
+
+                    if (System.getProperty("debugSwagger") != null) {
+                        LOGGER.info("############ Other Param info ############");
+                        Json.prettyPrint(templateParam);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Could not generate other files", e);
         }
 
         return output;
