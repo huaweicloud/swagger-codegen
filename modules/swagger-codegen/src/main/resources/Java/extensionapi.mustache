@@ -1,3 +1,15 @@
 {{>licenseInfo}}
 
 package {{packagename}};
+
+import com.huawei.openstack4j.api.Apis;
+import com.huawei.openstack4j.common.RestService;
+
+public class {{apiClassName}} extends {{apiBaseClassName}} implements RestService {
+    {{#apiImplClassNames}}
+
+    public {{apiImplClassName}} {{tagName}}() {
+        return Apis.get({{apiImplClassName}}.class);
+    }
+    {{/apiImplClassNames}}
+}
