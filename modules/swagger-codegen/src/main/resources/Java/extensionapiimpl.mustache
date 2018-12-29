@@ -1,0 +1,129 @@
+{{>licenseInfo}}
+
+package {{packagename}};
+
+import static com.google.common.base.Preconditions.checkArgument;
+
+import java.util.List;
+import java.util.Map;
+
+import com.google.common.base.Strings;
+
+import {{importpackagename}}.*;
+
+/**
+ * {{apiImplClassName}}
+ */
+public class {{apiImplClassName}} extends {{apiBaseClassName}} {
+    {{#alloperations}}
+    {{#operations}}
+    {{#operation}}
+
+    /**
+     * {{#summary}}{{.}}{{/summary}}{{^summary}}{{nickname}}{{/summary}}
+     */
+    {{#isDeprecated}}
+    @Deprecated
+    {{/isDeprecated}}
+    {{^vendorExtensions.x-is-delete-method}}
+    public {{#returnType}}{{{returnType}}} {{/returnType}}{{^returnType}}void {{/returnType}}{{{nickname}}}({{#hasPathParams}}{{#pathParams}}{{^vendorExtensions.x-isProject}}{{{dataType}}} {{{paramName}}}, {{/vendorExtensions.x-isProject}}{{/pathParams}}{{/hasPathParams}}{{#hasQueryParams}}{{#queryParams}}{{{dataType}}} {{{paramName}}}, {{/queryParams}}{{/hasQueryParams}}{{#hasBodyParam}}{{#bodyParams}}{{{dataType}}} {{{paramName}}}{{/bodyParams}}{{/hasBodyParam}}) {
+        {{#hasPathParams}}
+        {{#pathParams}}
+        {{^vendorExtensions.x-isProject}}
+        {{#required}}
+        {{#isString}}
+        checkArgument(!Strings.isNullOrEmpty({{{paramName}}}), "parameter `{{{paramName}}}` should not be empty");
+        {{/isString}}
+        {{^isString}}
+        checkArgument(null != {{{paramName}}}, "parameter `{{{paramName}}}` should not be null");
+        {{/isString}}
+        {{/required}}
+        {{/vendorExtensions.x-isProject}}
+        {{/pathParams}}
+        {{/hasPathParams}}
+        {{#hasQueryParams}}
+        {{#queryParams}}
+        {{#required}}
+        {{#isString}}
+        checkArgument(!Strings.isNullOrEmpty({{{paramName}}}), "parameter `{{{paramName}}}` should not be empty");
+        {{/isString}}
+        {{^isString}}
+        checkArgument(null != {{{paramName}}}, "parameter `{{{paramName}}}` should not be null");
+        {{/isString}}
+        {{/required}}
+        {{/queryParams}}
+        {{/hasQueryParams}}
+        {{#hasBodyParam}}
+        {{#bodyParams}}
+        {{#required}}
+        {{#isString}}
+        checkArgument(!Strings.isNullOrEmpty({{{paramName}}}), "parameter `{{{paramName}}}` should not be empty");
+        {{/isString}}
+        {{^isString}}
+        checkArgument(null != {{{paramName}}}, "parameter `{{{paramName}}}` should not be null");
+        {{/isString}}
+        {{/required}}
+        {{/bodyParams}}
+        {{/hasBodyParam}}
+
+        {{#vendorExtensions.x-is-get-method}}
+        return get({{#returnType}}{{{returnType}}}{{/returnType}}, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/{{{paramName}}}"{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}}).execute();
+        {{/vendorExtensions.x-is-get-method}}
+        {{#vendorExtensions.x-is-post-method}}
+        return post({{#returnType}}{{{returnType}}}{{/returnType}}.class, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/{{{paramName}}}"{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}}).entity({{#hasBodyParam}}{{#bodyParams}}{{{paramName}}}{{/bodyParams}}{{/hasBodyParam}}).execute();
+        {{/vendorExtensions.x-is-post-method}}
+        {{#vendorExtensions.x-is-put-method}}
+        return put({{#returnType}}{{{returnType}}}{{/returnType}}.class, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/{{{paramName}}}"{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}}).entity({{#hasBodyParam}}{{#bodyParams}}{{{paramName}}}{{/bodyParams}}{{/hasBodyParam}}).execute();
+        {{/vendorExtensions.x-is-put-method}}
+    }
+    {{/vendorExtensions.x-is-delete-method}}
+    {{#vendorExtensions.x-is-delete-method}}
+    public ActionResponse {{{nickname}}}({{#hasPathParams}}{{#pathParams}}{{^vendorExtensions.x-isProject}}{{{dataType}}} {{{paramName}}}, {{/vendorExtensions.x-isProject}}{{/pathParams}}{{/hasPathParams}}{{#hasQueryParams}}{{#queryParams}}{{{dataType}}} {{{paramName}}}, {{/queryParams}}{{/hasQueryParams}}{{#hasBodyParam}}{{#bodyParams}}{{{dataType}}} {{{paramName}}}{{/bodyParams}}{{/hasBodyParam}}) {
+        {{#hasPathParams}}
+        {{#pathParams}}
+        {{^vendorExtensions.x-isProject}}
+        {{#required}}
+        {{#isString}}
+        checkArgument(!Strings.isNullOrEmpty({{{paramName}}}), "parameter `{{{paramName}}}` should not be empty");
+        {{/isString}}
+        {{^isString}}
+        checkArgument(null != {{{paramName}}}, "parameter `{{{paramName}}}` should not be null");
+        {{/isString}}
+        {{/required}}
+        {{/vendorExtensions.x-isProject}}
+        {{/pathParams}}
+        {{/hasPathParams}}
+        {{#hasQueryParams}}
+        {{#queryParams}}
+        {{#required}}
+        {{#isString}}
+        checkArgument(!Strings.isNullOrEmpty({{{paramName}}}), "parameter `{{{paramName}}}` should not be empty");
+        {{/isString}}
+        {{^isString}}
+        checkArgument(null != {{{paramName}}}, "parameter `{{{paramName}}}` should not be null");
+        {{/isString}}
+        {{/required}}
+        {{/queryParams}}
+        {{/hasQueryParams}}
+        {{#hasBodyParam}}
+        {{#bodyParams}}
+        {{#required}}
+        {{#isString}}
+        checkArgument(!Strings.isNullOrEmpty({{{paramName}}}), "parameter `{{{paramName}}}` should not be empty");
+        {{/isString}}
+        {{^isString}}
+        checkArgument(null != {{{paramName}}}, "parameter `{{{paramName}}}` should not be null");
+        {{/isString}}
+        {{/required}}
+        {{/bodyParams}}
+        {{/hasBodyParam}}
+
+        return ToActionResponseFunction.INSTANCE
+                .apply(delete(Void.class, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/{{{paramName}}}"{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}}))
+                        .executeWithResponse());
+    }
+    {{/vendorExtensions.x-is-delete-method}}
+    {{/operation}}
+    {{/operations}}
+    {{/alloperations}}
+}
