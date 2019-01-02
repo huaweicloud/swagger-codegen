@@ -26,7 +26,7 @@ public class {{apiImplClassName}} extends {{apiBaseClassName}} {
     @Deprecated
     {{/isDeprecated}}
     {{^vendorExtensions.x-is-delete-method}}
-    public {{#returnType}}{{{returnType}}} {{/returnType}}{{^returnType}}void {{/returnType}}{{{nickname}}}({{#hasPathParams}}{{#pathParams}}{{^vendorExtensions.x-isProject}}{{{dataType}}} {{{paramName}}}, {{/vendorExtensions.x-isProject}}{{/pathParams}}{{/hasPathParams}}{{#hasQueryParams}}{{#queryParams}}{{{dataType}}} {{{paramName}}}, {{/queryParams}}{{/hasQueryParams}}{{#hasBodyParam}}{{#bodyParams}}{{{dataType}}} {{{paramName}}}{{/bodyParams}}{{/hasBodyParam}}) {
+    public {{#returnType}}{{{returnType}}} {{/returnType}}{{^returnType}}void {{/returnType}}{{{nickname}}}({{#hasPathParams}}{{#pathParams}}{{^vendorExtensions.x-isProject}}{{{dataType}}} {{{paramName}}}{{#hasMore}}, {{/hasMore}}{{^hasMore}}{{#hasQueryParams}}, {{/hasQueryParams}}{{^hasQueryParams}}{{#hasBodyParam}}, {{/hasBodyParam}}{{/hasQueryParams}}{{/hasMore}}{{/vendorExtensions.x-isProject}}{{/pathParams}}{{/hasPathParams}}{{#hasQueryParams}}{{#queryParams}}{{{dataType}}} {{{paramName}}}{{#hasMore}}, {{/hasMore}}{{^hasMore}}{{#hasBodyParam}}, {{/hasBodyParam}}{{/hasMore}}{{/queryParams}}{{/hasQueryParams}}{{#hasBodyParam}}{{#bodyParams}}{{{dataType}}} {{{paramName}}}{{/bodyParams}}{{/hasBodyParam}}) {
         {{#hasPathParams}}
         {{#pathParams}}
         {{^vendorExtensions.x-isProject}}
@@ -78,7 +78,7 @@ public class {{apiImplClassName}} extends {{apiBaseClassName}} {
     }
     {{/vendorExtensions.x-is-delete-method}}
     {{#vendorExtensions.x-is-delete-method}}
-    public ActionResponse {{{nickname}}}({{#hasPathParams}}{{#pathParams}}{{^vendorExtensions.x-isProject}}{{{dataType}}} {{{paramName}}}, {{/vendorExtensions.x-isProject}}{{/pathParams}}{{/hasPathParams}}{{#hasQueryParams}}{{#queryParams}}{{{dataType}}} {{{paramName}}}, {{/queryParams}}{{/hasQueryParams}}{{#hasBodyParam}}{{#bodyParams}}{{{dataType}}} {{{paramName}}}{{/bodyParams}}{{/hasBodyParam}}) {
+    public ActionResponse {{{nickname}}}({{#hasPathParams}}{{#pathParams}}{{^vendorExtensions.x-isProject}}{{{dataType}}} {{{paramName}}}{{#hasMore}}, {{/hasMore}}{{^hasMore}}{{#hasQueryParams}}, {{/hasQueryParams}}{{^hasQueryParams}}{{#hasBodyParam}}, {{/hasBodyParam}}{{/hasQueryParams}}{{/hasMore}}{{/vendorExtensions.x-isProject}}{{/pathParams}}{{/hasPathParams}}{{#hasQueryParams}}{{#queryParams}}{{{dataType}}} {{{paramName}}}{{#hasMore}}, {{/hasMore}}{{^hasMore}}{{#hasBodyParam}}, {{/hasBodyParam}}{{/hasMore}}{{/queryParams}}{{/hasQueryParams}}{{#hasBodyParam}}{{#bodyParams}}{{{dataType}}} {{{paramName}}}{{/bodyParams}}{{/hasBodyParam}}) {
         {{#hasPathParams}}
         {{#pathParams}}
         {{^vendorExtensions.x-isProject}}
