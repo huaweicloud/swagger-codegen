@@ -910,9 +910,12 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
 
                     if (op.returnContainer != null && op.returnContainer.equals("array")){
                         op.vendorExtensions.put("isExtractInfo", true);
-                        op.vendorExtensions.put("returnBaseTypeModel", config.toModelName(respBaseType));
+                        op.vendorExtensions.put("x-returnBaseTypeModel", config.toModelName(respBaseType));
                     } else {
                         modelMap.get(respBaseType).put("isExtractInfo", true);
+                        if (op.getHasQueryParams() == true) {
+                            modelMap.get(respBaseType).put("isQueryResponse", true);
+                        }
                     }
 
                     if (op.vendorExtensions == null) {

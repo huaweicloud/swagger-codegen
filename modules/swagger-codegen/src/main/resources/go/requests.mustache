@@ -69,7 +69,7 @@ type {{^isreqfirstmodel}}{{classname}}{{/isreqfirstmodel}}{{#isreqfirstmodel}}{{
 {{#description}}
 	// {{{description}}}
 {{/description}}
-	{{name}} {{#defaultValue}}{{#vendorExtensions.x-notEqualToJsonDefaultValue}}*{{/vendorExtensions.x-notEqualToJsonDefaultValue}}{{/defaultValue}}{{^isEnum}}{{^isPrimitiveType}}{{^isContainer}}{{^isDateTime}}*{{/isDateTime}}{{/isContainer}}{{/isPrimitiveType}}{{/isEnum}}{{{datatype}}} `json:"{{baseName}}{{^required}},omitempty{{/required}}"{{#required}} required:"true"{{/required}}{{#withXml}} xml:"{{baseName}}"{{/withXml}}`
+	{{name}} {{#defaultValue}}{{#vendorExtensions.x-notEqualToJsonDefaultValue}}*{{/vendorExtensions.x-notEqualToJsonDefaultValue}}{{/defaultValue}}{{{datatype}}} `json:"{{baseName}}{{^required}},omitempty{{/required}}"{{#required}} required:"true"{{/required}}{{#withXml}} xml:"{{baseName}}"{{/withXml}}`
 {{/vars}}
 }
 

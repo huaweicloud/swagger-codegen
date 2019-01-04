@@ -52,12 +52,13 @@ type {{classname}} struct {
 {{#operation}}
 {{#isListContainer}}
 
-type {{{vendorExtensions.returnBaseTypeModel}}}s {{{returnType}}}
+type {{{vendorExtensions.x-returnBaseTypeModel}}}s {{{returnType}}}
 {{/isListContainer}}
+{{#vendorExtensions.isExtractInfo}}
 {{#hasQueryParams}}
 
-func Extract{{nickname}}(r pagination.Page) ({{^isListContainer}}{{{returnType}}}{{/isListContainer}}{{#isListContainer}}{{{vendorExtensions.returnBaseTypeModel}}}s{{/isListContainer}}, error) {
-	var s {{^isListContainer}}{{{returnType}}}{{/isListContainer}}{{#isListContainer}}{{{vendorExtensions.returnBaseTypeModel}}}s{{/isListContainer}}
+func Extract{{nickname}}(r pagination.Page) ({{^isListContainer}}{{{returnType}}}{{/isListContainer}}{{#isListContainer}}{{{vendorExtensions.x-returnBaseTypeModel}}}s{{/isListContainer}}, error) {
+	var s {{^isListContainer}}{{{returnType}}}{{/isListContainer}}{{#isListContainer}}{{{vendorExtensions.x-returnBaseTypeModel}}}s{{/isListContainer}}
 	err := (r.({{nickname}}Page)).ExtractInto(&s)
 	return s, err
 }
@@ -76,11 +77,19 @@ func (r {{nickname}}Page) IsEmpty() (bool, error) {
 {{/vendorExtensions.isExtractInfo}}
 }
 {{/hasQueryParams}}
+{{/vendorExtensions.isExtractInfo}}
 {{^hasQueryParams}}
 
+{{#hasReference}}
 type {{nickname}}Result struct {
 	commonResult
 }
+{{/hasReference}}
+{{^hasReference}}
+type {{nickname}}Result struct {
+	gophercloud.ErrResult
+}
+{{/hasReference}}
 {{/hasQueryParams}}
 {{/operation}}
 {{/operations}}
@@ -88,34 +97,39 @@ type {{nickname}}Result struct {
 {{#allmodels}}
 {{#model}}
 {{#isExtractInfo}}
+{{^isQueryResponse}}
 
 func (r commonResult) Extract{{classname}}Info() (*{{classname}}, error) {
 	var s {{classname}}
 	err := r.ExtractInto(&s)
 	return &s, err
 }
-{{/isExtractInfo}}
-{{/model}}
-{{/allmodels}}
-{{#alloperations}}
-{{#operations}}
-{{#operation}}
-{{#vendorExtensions.isExtractInfo}}
-{{^hasQueryParams}}
+{{/isQueryResponse}}
+{{#isQueryResponse}}
 
-func (r commonResult) Extract{{vendorExtensions.returnBaseTypeModel}}sInfo() (*{{vendorExtensions.returnBaseTypeModel}}s, error) {
-	var s {{vendorExtensions.returnBaseTypeModel}}s
-	err := r.ExtractInto(&s)
-	return &s, err
-}
-{{/hasQueryParams}}
-{{#hasQueryParams}}
-
-func Extract{{{nickname}}}(r pagination.Page) ({{vendorExtensions.returnBaseTypeModel}}s, error) {
-	var s {{vendorExtensions.returnBaseTypeModel}}s
+func Extract{{{nickname}}}(r pagination.Page) ({{classname}}, error) {
+	var s {{classname}}
+{{#vars}}
+	{{#isContainer}}s.{{name}} = make({{{datatype}}}, 0){{/isContainer}}
+{{/vars}}
 	err := (r.({{{nickname}}}Page)).ExtractInto(&s)
 	return &s, err
 }
+{{/isQueryResponse}}
+ {{/isExtractInfo}}
+ {{/model}}
+ {{/allmodels}}
+ {{#alloperations}}
+ {{#operations}}
+ {{#operation}}
+ {{#vendorExtensions.isExtractInfo}}
+ {{^hasQueryParams}}
+
+ func (r commonResult) Extract{{vendorExtensions.x-returnBaseTypeModel}}sInfo() (*{{vendorExtensions.x-returnBaseTypeModel}}s, error) {
+ 	var s {{vendorExtensions.x-returnBaseTypeModel}}s
+ 	err := r.ExtractInto(&s)
+ 	return &s, err
+ }
 {{/hasQueryParams}}
 {{/vendorExtensions.isExtractInfo}}
 {{/operation}}
