@@ -12,27 +12,32 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * {{#description}}{{{description}}}{{/description}}
  */
 public enum {{classname}} {
-
     {{#allowableValues}}
     {{#enumVars}}
-    {{{name}}}({{{value}}}){{^-last}},
-    {{/-last}}{{#-last}};{{/-last}}
+    {{{name}}}({{{value}}}){{^-last}},{{/-last}}{{#-last}};{{/-last}}
     {{/enumVars}}
     {{/allowableValues}}
 
+    private final {{{datatype}}} value;
+
+    private {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{{classname}}}{{/datatypeWithEnum}}({{{datatype}}} value) {
+        this.value = value;
+    }
+
     @JsonValue
-    public String value() {
-        return name();
+    public {{{datatype}}} value() {
+        return value;
     }
 
     @JsonCreator
-    public static {{classname}} value(String v)
-    {
-        try {
-            return valueOf(v);
-        } catch (IllegalArgumentException e) {
-            return null;
+    public static {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{{classname}}}{{/datatypeWithEnum}} value(String v) {
+        if (v == null || v.isEmpty()) return null;
+        for ({{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{{classname}}}{{/datatypeWithEnum}} t : {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{{classname}}}{{/datatypeWithEnum}}.values()) {
+            if (String.valueOf(t.value).equals(v)) {
+                return t;
+            }
         }
+        return null;
     }
 }
 {{/isEnum}}
@@ -44,7 +49,12 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.huawei.openstack4j.model.ModelEntity;
+import com.huawei.openstack4j.openstack.common.ListResult;
+
+import java.util.List;
 
 /**
  * {{#description}}{{{description}}}{{/description}}
@@ -59,15 +69,75 @@ public class {{classname}} implements ModelEntity {
      * serialVersionUID
      */
     private static final long serialVersionUID = 1L;
-
     {{#vars}}
+    {{#isEnum}}
+
+    /**
+    * {{#description}}{{{description}}}{{/description}}
+    */
+    public enum {{{datatypeWithEnum}}} {
+        {{#allowableValues}}
+        {{#enumVars}}
+        {{{name}}}({{{value}}}){{^-last}},{{/-last}}{{#-last}};{{/-last}}
+        {{/enumVars}}
+        {{/allowableValues}}
+
+        private final {{{datatype}}} value;
+
+        private {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{{classname}}}{{/datatypeWithEnum}}({{{datatype}}} value) {
+            this.value = value;
+        }
+
+        @JsonValue
+        public {{{datatype}}} value() {
+            return value;
+        }
+
+        @JsonCreator
+        public static {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{{classname}}}{{/datatypeWithEnum}} value(String v) {
+            if (v == null || v.isEmpty()) return null;
+            for ({{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{{classname}}}{{/datatypeWithEnum}} t : {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{{classname}}}{{/datatypeWithEnum}}.values()) {
+                if (String.valueOf(t.value).equals(v)) {
+                    return t;
+                }
+            }
+            return null;
+        }
+    }
+    {{/isEnum}}
+
     /**
      * {{{description}}}
      */
     @JsonProperty("{{baseName}}")
     private {{{datatypeWithEnum}}} {{name}};
     {{/vars}}
+    {{/isEnum}}
+    {{/model}}
+    {{/singlemodel}}
+    {{#alloperations}}
+    {{#operations}}
+    {{#operation}}
+    {{#vendorExtensions.isExtractInfo}}
+
+    /**
+     * {{{summary}}}
+     */
+    public static class {{returnBaseType}}s extends ListResult<{{returnBaseType}}> {
+        /**
+        * serialVersionUID
+        */
+        private static final long serialVersionUID = 1L;
+
+        protected List<{{returnBaseType}}> list;
+
+        @Override
+        public List<{{returnBaseType}}> value() {
+            return list;
+        }
+    }
+    {{/vendorExtensions.isExtractInfo}}
+    {{/operation}}
+    {{/operations}}
+    {{/alloperations}}
 }
-{{/isEnum}}
-{{/model}}
-{{/singlemodel}}

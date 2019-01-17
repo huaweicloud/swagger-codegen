@@ -3915,4 +3915,21 @@ public class DefaultCodegen {
         }
         return modelKey;
     }
+
+    public String getRequestKey(Object o) {
+        String requestKey = null;
+        if (o != null) {
+            CodegenOperation co = (CodegenOperation) o;
+            if (co != null) {
+                if (co.bodyParam != null) {
+                    if (co.bodyParam.isContainer == true) {
+                        requestKey = co.bodyParam.baseType;
+                    } else {
+                        requestKey = co.bodyParam.baseName;
+                    }
+                }
+            }
+        }
+        return requestKey;
+    }
 }

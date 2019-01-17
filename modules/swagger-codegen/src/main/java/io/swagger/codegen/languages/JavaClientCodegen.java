@@ -701,6 +701,21 @@ public class JavaClientCodegen extends AbstractJavaCodegen
         return modelKey;
     }
 
+    // override with request key
+    @Override
+    public String getRequestKey(Object o) {
+        String requestKey = null;
+        if (o != null) {
+            CodegenOperation co = (CodegenOperation) o;
+            if (co != null) {
+                if (co.bodyParam != null) {
+                    requestKey = co.bodyParam.baseType;
+                }
+            }
+        }
+        return requestKey;
+    }
+
     @Override
     public List<Map<String, Object>> writeApiModelToFile(List<File> files, List<Object> allOperations,
             List<Object> allModels, Swagger swagger) {

@@ -869,13 +869,14 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                 resetPathParams(op);
                 setOpPath(op);
 
-                if (op.bodyParam != null) {
+                /*if (op.bodyParam != null) {
                     if (op.bodyParam.isContainer == true){
                         reqBaseType = op.bodyParam.baseType;
                     } else{
                         reqBaseType = op.bodyParam.baseName;
                     }
-                }
+                }*/
+                reqBaseType = config.getRequestKey(op);
                 LOGGER.info("respBaseType=" + respBaseType + ", reqBaseType=" + reqBaseType);
 
                 if(op.tags != null && op.tags.size() > 0) {
@@ -1069,9 +1070,32 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
             return;
         }
 
-        for (CodegenParameter p : op.pathParams) {
+        /*for (CodegenParameter p : op.pathParams) {
             if (p.baseName.equals("project_id")) {
                 p.vendorExtensions.put("x-isProject", true);
+            }
+        }*/
+        // set x-isProject
+        int index = 0;
+        for (int i = 0; i < op.pathParams.size(); i++) {
+            if (op.pathParams.get(i).baseName.equals("project_id")) {
+                op.pathParams.get(i).vendorExtensions.put("x-isProject", true);
+                index = i;
+                break;
+            }
+        }
+        // keep x-isProject is the first element
+        if (index > 0) {
+            CodegenParameter cp = op.pathParams.get(index);
+            op.pathParams.remove(index);
+            op.pathParams.add(0, cp);
+        }
+        // reset hasMore
+        for (int j = 0; j < op.pathParams.size(); j++) {
+            if (j == (op.pathParams.size() - 1)) {
+                op.pathParams.get(j).hasMore = false;
+            } else {
+                op.pathParams.get(j).hasMore = true;
             }
         }
         return;

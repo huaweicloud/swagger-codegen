@@ -226,4 +226,6 @@ public interface CodegenConfig {
     List<Map<String, Object>> writeApiModelToFile(List<File> files, List<Object> allOperations, List<Object> allModels, Swagger swagger);
 
     String getModelKey(Object o);
+
+    String getRequestKey(Object o);
 }
