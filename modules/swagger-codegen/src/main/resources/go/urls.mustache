@@ -1,4 +1,4 @@
-package {{classVarName}}
+package {{folderName}}
 
 
 {{#alloperations}}
@@ -10,8 +10,8 @@ import (
 )
 {{#operation}}
 
-func {{{nickname}}}URL(c *gophercloud.ServiceClient{{#pathParams}}{{^vendorExtensions.x-isProject}}, {{{paramName}}} {{dataType}}{{/vendorExtensions.x-isProject}}{{/pathParams}}) string {
-	return c.ServiceURL({{#vendorExtensions.x-resourcePath}}"{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}}, {{{paramName}}}{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}}, "{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}})
+func {{vendorExtensions.x-nicknameLowerCase}}URL(c *gophercloud.ServiceClient{{#pathParams}}{{^vendorExtensions.x-isProject}}, {{{paramName}}} {{dataType}}{{/vendorExtensions.x-isProject}}{{/pathParams}}) string {
+	return c.ServiceURL({{#vendorExtensions.x-resourcePath}}"{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}}, {{/vendorExtensions.x-isProject}}{{/pathParams}}{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}}{{{paramName}}}{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}}, "{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}})
 }
 {{/operation}}
 {{/operations}}

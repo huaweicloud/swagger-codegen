@@ -1,4 +1,4 @@
-package {{classVarName}}
+package {{folderName}}
 
 {{#alloperations}}
 import (
@@ -10,30 +10,29 @@ import (
 )
 {{/operations}}
 {{/alloperations}}
-
 {{#alloperations}}
 {{#operations}}
 {{#operation}}
 {{#hasBodyParam}}
 {{#bodyParam.vendorExtensions.x-reqbodyparaminnermodel}}
-type {{{nickname}}}Opts {{#bodyParam.isListContainer}}{{#bodyParams}}{{#isContainer}}{{{dataType}}}{{/isContainer}}{{/bodyParams}}{{/bodyParam.isListContainer}}{{^bodyParam.isListContainer}} struct {
+
+type {{vendorExtensions.x-nickname}}Opts {{#bodyParam.isListContainer}}{{#bodyParams}}{{#isContainer}}{{{dataType}}}{{/isContainer}}{{/bodyParams}}{{/bodyParam.isListContainer}}{{^bodyParam.isListContainer}} struct {
 {{#bodyParams}}
-	{{vendorExtensions.x-exportParamName}}{{name}} {{#defaultValue}}{{#vendorExtensions.x-notEqualToJsonDefaultValue}}*{{/vendorExtensions.x-notEqualToJsonDefaultValue}}{{/defaultValue}}{{{dataType}}} `json:"{{baseName}}{{^required}},omitempty{{/required}}"{{#required}} required:"true"{{/required}}`
+	{{vendorExtensions.x-exportParamName}}{{name}} {{#vendorExtensions.x-isPointer}}*{{/vendorExtensions.x-isPointer}}{{{dataType}}} `json:"{{baseName}}{{^required}},omitempty{{/required}}"{{#required}} required:"true"{{/required}}`
 {{/bodyParams}}
 }{{/bodyParam.isListContainer}}
-
 {{/bodyParam.vendorExtensions.x-reqbodyparaminnermodel}}
 {{/hasBodyParam}}
 {{#hasQueryParams}}
-type {{{nickname}}}Opts struct {
+
+type {{vendorExtensions.x-nickname}}Opts struct {
 {{#queryParams}}
 {{#description}}
     // {{{description}}}
 {{/description}}
-    {{vendorExtensions.x-exportParamName}} {{{dataType}}} `q:"{{baseName}}{{^required}},omitempty{{/required}}"{{#required}} required:"true"{{/required}}`
+    {{vendorExtensions.x-exportParamName}} {{{dataType}}} `q:"{{baseName}}{{#required}},required{{/required}}"`
 {{/queryParams}}
 }
-
 {{/hasQueryParams}}
 {{/operation}}
 {{/operations}}
@@ -42,6 +41,7 @@ type {{{nickname}}}Opts struct {
 {{#model}}
 {{#isReq}}
 {{#isEnum}}
+
 {{#description}}
 	// {{{classname}}} : {{{description}}}
 {{/description}}
@@ -56,23 +56,22 @@ const (
 	{{/enumVars}}
 	{{/allowableValues}}
 )
-
 {{/isEnum}}
 {{^isEnum}}
+
 {{#description}}
 // {{{description}}}
 {{/description}}
-type {{^isreqfirstmodel}}{{classname}}{{/isreqfirstmodel}}{{#isreqfirstmodel}}{{{nickname}}}Opts{{/isreqfirstmodel}} struct {
+type {{^isreqfirstmodel}}{{classname}}{{/isreqfirstmodel}}{{#isreqfirstmodel}}{{vendorExtensions.x-nickname}}Opts{{/isreqfirstmodel}} struct {
 {{#vars}}
 {{^-first}}
 {{/-first}}
 {{#description}}
 	// {{{description}}}
 {{/description}}
-	{{name}} {{#defaultValue}}{{#vendorExtensions.x-notEqualToJsonDefaultValue}}*{{/vendorExtensions.x-notEqualToJsonDefaultValue}}{{/defaultValue}}{{{datatype}}} `json:"{{baseName}}{{^required}},omitempty{{/required}}"{{#required}} required:"true"{{/required}}{{#withXml}} xml:"{{baseName}}"{{/withXml}}`
+	{{name}} {{#vendorExtensions.x-isPointer}}*{{/vendorExtensions.x-isPointer}}{{{datatype}}} `json:"{{baseName}}{{^required}},omitempty{{/required}}"{{#required}} required:"true"{{/required}}{{#withXml}} xml:"{{baseName}}"{{/withXml}}`
 {{/vars}}
 }
-
 {{/isEnum}}
 {{/isReq}}
 {{/model}}
@@ -83,28 +82,28 @@ type {{^isreqfirstmodel}}{{classname}}{{/isreqfirstmodel}}{{#isreqfirstmodel}}{{
 {{#hasParams}}
 {{#hasBodyParam}}
 {{#bodyParam.isListContainer}}
+
 func (opts {{{bodyParam.items.items.datatype}}}) ToMap() (map[string]interface{}, error) {
 	return gophercloud.BuildRequestBody(opts, "")
 }
-
 {{/bodyParam.isListContainer}}
-func (opts {{{nickname}}}Opts) To{{{nickname}}}Map() ({{#bodyParam.isListContainer}}[]{{/bodyParam.isListContainer}}map[string]interface{}, error) {
+
+func (opts {{vendorExtensions.x-nickname}}Opts) To{{vendorExtensions.x-nickname}}Map() ({{#bodyParam.isListContainer}}[]{{/bodyParam.isListContainer}}map[string]interface{}, error) {
     {{#bodyParam.isListContainer}}
     newOpts := make([]map[string]interface{}, len(opts))
-    	for i, opt := range opts {
-    		opt, err := opt.ToMap()
-    		if err != nil {
-    			return nil, err
-    		}
-    		newOpts[i] = opt
-    	}
+    for i, opt := range opts {
+        opt, err := opt.ToMap()
+        if err != nil {
+            return nil, err
+        }
+        newOpts[i] = opt
+    }
     return newOpts, nil
     {{/bodyParam.isListContainer}}
     {{^bodyParam.isListContainer}}
 	return gophercloud.BuildRequestBody(opts, "")
 	{{/bodyParam.isListContainer}}
 }
-
 {{/hasBodyParam}}
 {{/hasParams}}
 {{/operation}}
@@ -115,10 +114,10 @@ func (opts {{{nickname}}}Opts) To{{{nickname}}}Map() ({{#bodyParam.isListContain
 {{#operation}}
 {{#hasParams}}
 {{#hasBodyParam}}
-type {{{nickname}}}OptsBuilder interface {
-	To{{{nickname}}}Map() ({{#bodyParam.isListContainer}}[]{{/bodyParam.isListContainer}}map[string]interface{}, error)
-}
 
+type {{vendorExtensions.x-nickname}}OptsBuilder interface {
+	To{{vendorExtensions.x-nickname}}Map() ({{#bodyParam.isListContainer}}[]{{/bodyParam.isListContainer}}map[string]interface{}, error)
+}
 {{/hasBodyParam}}
 {{/hasParams}}
 {{/operation}}
@@ -127,35 +126,48 @@ type {{{nickname}}}OptsBuilder interface {
 {{#alloperations}}
 {{#operations}}
 {{#operation}}
-func {{{nickname}}}(client *gophercloud.ServiceClient{{#hasPathParams}}{{#pathParams}}{{^vendorExtensions.x-isProject}}, {{{paramName}}} {{{dataType}}}{{/vendorExtensions.x-isProject}}{{/pathParams}}{{/hasPathParams}}{{#hasQueryParams}}, opts {{{nickname}}}Opts{{/hasQueryParams}}{{#hasBodyParam}}, opts {{{nickname}}}OptsBuilder{{/hasBodyParam}}) {{^hasQueryParams}}(r {{{nickname}}}Result) {{/hasQueryParams}}{{#hasQueryParams}}pagination.Pager {{/hasQueryParams}}{
+
+func {{vendorExtensions.x-nickname}}(client *gophercloud.ServiceClient{{#hasPathParams}}{{#pathParams}}{{^vendorExtensions.x-isProject}}, {{{paramName}}} {{{dataType}}}{{/vendorExtensions.x-isProject}}{{/pathParams}}{{/hasPathParams}}{{#hasQueryParams}}, opts {{vendorExtensions.x-nickname}}Opts{{/hasQueryParams}}{{#hasBodyParam}}, opts {{vendorExtensions.x-nickname}}OptsBuilder{{/hasBodyParam}}) {{^vendorExtensions.x-isPage}}(r {{vendorExtensions.x-nickname}}Result) {{/vendorExtensions.x-isPage}}{{#vendorExtensions.x-isPage}}pagination.Pager {{/vendorExtensions.x-isPage}}{
 {{#hasQueryParams}}
     q, err := gophercloud.BuildQueryString(&opts)
+{{/hasQueryParams}}
+{{#vendorExtensions.x-isPage}}
     if err != nil {
         return pagination.Pager{Err: err}
     }
-
-    url := {{{nickname}}}URL(client) + q.String()
-    return pagination.NewPager(client, url, func(r pagination.PageResult) pagination.Page {
-        return {{{nickname}}}Page{pagination.LinkedPageBase{PageResult: r}}
-    })
+{{/vendorExtensions.x-isPage}}
+{{^vendorExtensions.x-isPage}}
+{{#hasQueryParams}}
+    if err != nil {
+        r.Err = err
+        return
+    }
 {{/hasQueryParams}}
+{{/vendorExtensions.x-isPage}}
+{{#hasQueryParams}}
+    url := {{vendorExtensions.x-nicknameLowerCase}}URL(client) + q.String()
+{{/hasQueryParams}}
+{{#vendorExtensions.x-isPage}}
+    return pagination.NewPager(client, url, func(r pagination.PageResult) pagination.Page {
+        return {{vendorExtensions.x-classname}}Page{pagination.LinkedPageBase{PageResult: r}}
+    })
+{{/vendorExtensions.x-isPage}}
 {{#hasBodyParam}}
-    b, err := opts.To{{{nickname}}}Map()
+    b, err := opts.To{{vendorExtensions.x-nickname}}Map()
     if err != nil {
         r.Err = err
         return
     }
 
 {{/hasBodyParam}}
-{{^hasQueryParams}}
-    _, r.Err = client.{{httpMethod}}({{{nickname}}}URL(client{{#hasPathParams}}{{#pathParams}}{{^vendorExtensions.x-isProject}}, {{{paramName}}}{{/vendorExtensions.x-isProject}}{{/pathParams}}{{/hasPathParams}}){{#hasBodyParam}}, b{{/hasBodyParam}}{{^vendorExtensions.x-is-delete-method}}, &r.Body{{/vendorExtensions.x-is-delete-method}}, &gophercloud.RequestOpts{
+{{^vendorExtensions.x-isPage}}
+    _, r.Err = client.{{httpMethod}}({{#hasQueryParams}}url{{/hasQueryParams}}{{^hasQueryParams}}{{vendorExtensions.x-nicknameLowerCase}}URL(client{{#hasPathParams}}{{#pathParams}}{{^vendorExtensions.x-isProject}}, {{{paramName}}}{{/vendorExtensions.x-isProject}}{{/pathParams}}{{/hasPathParams}}){{/hasQueryParams}}{{#hasBodyParam}}, b{{/hasBodyParam}}{{^vendorExtensions.x-is-delete-method}}, &r.Body{{/vendorExtensions.x-is-delete-method}}, &gophercloud.RequestOpts{
         OkCodes: []int{{#responses}}{{#isDefault}}{{=<% %>=}}{<% code %>}<%={{ }}=%>{{/isDefault}}{{/responses}},
     })
 
     return
-{{/hasQueryParams}}
+{{/vendorExtensions.x-isPage}}
 }
-
 {{/operation}}
 {{/operations}}
 {{/alloperations}}

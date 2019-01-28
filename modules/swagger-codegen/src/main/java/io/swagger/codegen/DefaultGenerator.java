@@ -775,20 +775,24 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
     }
 
     private void setVarIsEqualToJsonDefaultValue(CodegenProperty var){
-        if (var.defaultValue == null) {
-            return;
+        if (var.isBoolean == true) {
+            var.vendorExtensions.put("x-isPointer", true);
         }
 
-        if (var.isBoolean == true && var.defaultValue == "False") {
-            var.vendorExtensions.put("x-notEqualToJsonDefaultValue", true);
+        if (var.isInteger == true || var.isLong == true) {
+            if (var.minimum != null) {
+                if (Integer.parseInt(var.minimum) <= 0) {
+                    var.vendorExtensions.put("x-isPointer", true);
+                }
+            }
         }
     }
 
-    private String setVarReqResp(CodegenProperty var, List<Map<String, Object>> tagsInfo, Map<String, Map<String, Object>> modelMap) {
+    private String setVarReqResp(CodegenProperty var, List<Map<String, Object>> tagsInfo, Map<String, Map<String, Object>> modelMap, boolean isDeprecated) {
         if (var.isContainer) {
-            return setVarReqResp(var.items, tagsInfo, modelMap);
+            return setVarReqResp(var.items, tagsInfo, modelMap, isDeprecated);
         }
-        if (var.complexType == null && var.defaultValue != null) {
+        if (var.complexType == null) {
             setVarIsEqualToJsonDefaultValue(var);
         }
 
@@ -799,18 +803,20 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                 if (model.containsKey("tagsInfo")) {
                     List<Object> oldTagsInfo = (List<Object>) model.get("tagsInfo");
                     newTagsInfo.addAll((List<Map<String, Object>>) model.get("tagsInfo"));
-                    for (int i = 0; i < oldTagsInfo.size(); i++) {
-                        Map<String, Object> oldTagInfo = (Map<String, Object>) oldTagsInfo.get(i);
-                        String oldTagName = oldTagInfo.get("classVarName").toString();
-                        String oldApiVersion = oldTagInfo.get("apiVersion").toString();
-
-                        for (int j = 0; j < tagsInfo.size(); j++) {
-                            Map<String, Object> tagInfo = (Map<String, Object>) tagsInfo.get(j);
-                            String modelTagName = tagInfo.get("classVarName").toString();
-                            String modelapiVersion = tagInfo.get("apiVersion").toString();
-                            if (oldTagName.equals(modelTagName) && oldApiVersion.equals(modelapiVersion)){
-                                continue;
+                    for (int i = 0; i < tagsInfo.size(); i++) {
+                        Map<String, Object> tagInfo = (Map<String, Object>) tagsInfo.get(i);
+                        String tagName = tagInfo.get("classVarName").toString();
+                        String apiVersion = tagInfo.get("apiVersion").toString();
+                        boolean isExistInOldTagInfo = false;
+                        for (int j = 0; j < oldTagsInfo.size(); j++) {
+                            Map<String, Object> oldTagInfo = (Map<String, Object>) oldTagsInfo.get(j);
+                            String oldModelTagName = oldTagInfo.get("classVarName").toString();
+                            String oldModelapiVersion = oldTagInfo.get("apiVersion").toString();
+                            if (oldModelTagName.equals(tagName) && oldModelapiVersion.equals(apiVersion)){
+                                isExistInOldTagInfo = true;
                             }
+                        }
+                        if (isExistInOldTagInfo == false) {
                             newTagsInfo.add(tagInfo);
                         }
                     }
@@ -822,9 +828,14 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                     model.put("tagsInfo", newTagsInfo);
                 }
 
+                if (isDeprecated == true && !model.containsKey("isDeprecated")) {
+                    model.put("isDeprecated", isDeprecated);
+                } else {
+                    model.put("isDeprecated", false);
+                }
                 CodegenModel cm = (CodegenModel)model.get("model");
                 for (CodegenProperty var1 : cm.vars) {
-                    String complexType = setVarReqResp(var1, tagsInfo, modelMap);
+                    String complexType = setVarReqResp(var1, tagsInfo, modelMap, isDeprecated);
                     if (var1.isContainer && !complexType.isEmpty()) {
                         if (var1.vendorExtensions == null) {
                             var1.vendorExtensions = new HashMap<String, Object>();
@@ -837,6 +848,13 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
             }
         }
         return "";
+    }
+
+    private boolean getIsDeprecated(CodegenOperation op) {
+        if ((boolean) op.isDeprecated == true) {
+            return true;
+        }
+        return false;
     }
 
     private void mergeModelApiInfo(List<Object> allModels, List<Object> allOperations) {
@@ -868,6 +886,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
 
                 resetPathParams(op);
                 setOpPath(op);
+                setIsOpPage(op);
 
                 /*if (op.bodyParam != null) {
                     if (op.bodyParam.isContainer == true){
@@ -883,9 +902,11 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                     tagName = op.tags.get(0).getName().toLowerCase();
                 }
 
-                String apiVersion = getVersionByPath(op.path.toString());
+                String apiVersion = getVersionByOp(op);
+                boolean isDeprecated = getIsDeprecated(op);
                 if (reqBaseType != null && modelMap.containsKey(reqBaseType)) {
                     setTagsInfo(modelMap.get(reqBaseType), tagName, apiVersion, true, false);
+                    modelMap.get(reqBaseType).put("isDeprecated", isDeprecated);
                     modelMap.get(reqBaseType).put("isReq", true);
                     modelMap.get(reqBaseType).put("apiVersion", apiVersion);
                     modelMap.get(reqBaseType).put("classVarName", tagName);
@@ -908,13 +929,14 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                     modelMap.get(respBaseType).put("classVarName", tagName);
                     modelMap.get(respBaseType).put("apiVersion", apiVersion);
                     modelMap.get(respBaseType).put("nickname", op.nickname);
+                    modelMap.get(respBaseType).put("isDeprecated", isDeprecated);
 
                     if (op.returnContainer != null && op.returnContainer.equals("array")){
                         op.vendorExtensions.put("isExtractInfo", true);
                         op.vendorExtensions.put("x-returnBaseTypeModel", config.toModelName(respBaseType));
                     } else {
                         modelMap.get(respBaseType).put("isExtractInfo", true);
-                        if (op.getHasQueryParams() == true) {
+                        if (getIsPage(op) == true) {
                             modelMap.get(respBaseType).put("isQueryResponse", true);
                         }
                     }
@@ -944,15 +966,20 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         }
         for (Object ms : allModels) {
             Map<String, Object> model = (Map<String, Object>)ms;
+
+            boolean mIsDeprecated = false;
             if (!model.containsKey("model")) {
                 continue;
             }
             if (!model.containsKey("tagsInfo")) {
                     continue;
             }
+            if (model.containsKey("isDeprecated")) {
+                mIsDeprecated = (boolean) model.get("isDeprecated");
+            }
             CodegenModel cm = (CodegenModel)model.get("model");
             for (CodegenProperty var : cm.vars) {
-                String complexType = setVarReqResp(var, (List<Map<String, Object>>) model.get("tagsInfo"), modelMap);
+                String complexType = setVarReqResp(var, (List<Map<String, Object>>) model.get("tagsInfo"), modelMap, mIsDeprecated);
                 if (var.isContainer && !complexType.isEmpty()) {
                     if (var.vendorExtensions == null) {
                         var.vendorExtensions = new HashMap<String, Object>();
@@ -1030,6 +1057,43 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         return null;
     }
 
+    private void setIsOpPage(CodegenOperation op) {
+        if (getIsPage(op) == true) {
+            if (op.vendorExtensions == null) {
+                op.vendorExtensions = new HashMap<String, Object>();
+            }
+            op.vendorExtensions.put("x-isPage", true);
+        }
+    }
+
+    private boolean getIsPage(CodegenOperation op) {
+        if (op.getHasQueryParams() == false) {
+            return false;
+        }
+
+        for (CodegenParameter p : op.queryParams) {
+            if (p.baseName.equals("limit")) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean isExistInOldTagInfo(List<Map<String, Object>> oldTagsInfo, String tagName, String apiVersion) {
+        for (int i = 0; i < oldTagsInfo.size(); i++){
+            Map<String, Object> oldTagInfo = oldTagsInfo.get(i);
+            String modelTagName = oldTagInfo.get("classVarName").toString();
+            String modelapiVersion = oldTagInfo.get("apiVersion").toString();
+
+            if (tagName.equals(modelTagName) && apiVersion.equals(modelapiVersion)){
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private void setTagsInfo(Map<String, Object> model, String tagName, String apiVersion, boolean isContainReq, boolean isContainResp){
         List<Map<String, Object>> tagsInfo = new ArrayList<Map<String, Object>>();
         // Only show once in request.go when both isContainReq and isContainResp are set to true
@@ -1040,14 +1104,10 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         if (model.containsKey("tagsInfo")){
             List<Map<String, Object>> oldTagsInfo = (List<Map<String, Object>>) model.get("tagsInfo");
 
-            for (int i = 0; i < oldTagsInfo.size(); i++){
-                Map<String, Object> oldTagInfo = oldTagsInfo.get(i);
-                String modelTagName = oldTagInfo.get("classVarName").toString();
-                String modelapiVersion = oldTagInfo.get("apiVersion").toString();
-                if (tagName.equals(modelTagName) && apiVersion.equals(modelapiVersion)){
-                    return;
-                }
+            if (isExistInOldTagInfo(oldTagsInfo, tagName, apiVersion) == true) {
+                return;
             }
+
             tagsInfo.addAll(oldTagsInfo);
         }
 
@@ -1141,14 +1201,51 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
 
     private String getVersionByPath(String path) {
         path = path.toLowerCase();
-        String pattern = "v?[0-9]+\\.?[0-9]*";
         for (String p : path.split("/")) {
-            boolean isMatch = Pattern.matches(pattern, p);
-            if (isMatch == true) {
+            if (isMatchVersionPattern(p) == true) {
                 return p;
             }
         }
         return "";
+    }
+
+    private boolean isMatchVersionPattern(String version) {
+        if (version == "") {
+            return false;
+        }
+
+        version = version.toLowerCase();
+        String pattern = "v?[0-9]+\\.?[0-9]*";
+        boolean isMatch = Pattern.matches(pattern, version);
+
+        return isMatch;
+    }
+
+    private String getVersionByOp(CodegenOperation op) {
+        String apiVersion = "";
+        if (op.vendorExtensions.containsKey("x-version")) {
+            apiVersion = op.vendorExtensions.get("x-version").toString();
+        } else {
+            apiVersion = getVersionByPath(op.path.toString());
+        }
+
+        apiVersion = getStandardVersion(apiVersion);
+        return apiVersion;
+    }
+
+    private String getStandardVersion(String version) {
+        String apiVersion = "";
+        if (isMatchVersionPattern(version) == true) {
+            apiVersion = version;
+            String[] v = version.split(".");
+            if (v.length > 1) {
+                String decimal = v[1];
+                if (decimal.equals("0")) {
+                    apiVersion = v[0];
+                }
+            }
+        }
+        return apiVersion.toLowerCase();
     }
 
     private void writeAllApiModelToFile(List<File> files, List<Object> allOperations, List<Object> allModels, Swagger swagger) {
