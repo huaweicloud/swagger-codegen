@@ -32,6 +32,7 @@ public class GoClientCodegen extends AbstractGoCodegen {
 
         outputFolder = "generated-code/go";
         modelTemplateFiles.put("results.mustache", ".go");
+        apiTestTemplateFiles.put("requests_test.mustache", ".go");
         apiTemplateFiles.put("requests.mustache", ".go");
         apiTemplateFiles.put("urls.mustache", ".go");
         apiTemplateFiles.put("results.mustache", ".go");
@@ -264,6 +265,176 @@ public class GoClientCodegen extends AbstractGoCodegen {
         this.packageVersion = packageVersion;
     }
 
+    private void addApiTestTemplateParam(String tagName, String serviceType, String version, String apiVersion,
+                                      List<Object> allTmpModels, List<Object> allTmpOperations,
+                                      List<Map<String, Object>> output) {
+        for (String templateName : apiTestTemplateFiles().keySet()) {
+            String suffix = apiTestTemplateFiles().get(templateName);
+
+            Map<String, Object> templateParam = new HashMap<String, Object>();
+            templateParam.put("classVarName", tagName);
+            templateParam.put("serviceType", serviceType);
+            templateParam.put("version", version);
+            templateParam.put("allmodels", allTmpModels);
+            templateParam.put("alloperations", allTmpOperations);
+
+            // eg: /tmp/1_0_0/compute/v1/instance/request.go
+            String filename = (apiFileFolder() + version + File.separator + "acceptance" + File.separator +
+                    serviceType + File.separator + apiVersion + File.separator + tagName + "_test" + suffix);
+            if (!super.shouldOverwrite(filename) && new File(filename).exists()) {
+                LOGGER.info("Skipped overwriting " + filename);
+                continue;
+            }
+            templateParam.put("templateName", templateName);
+            templateParam.put("filename", filename);
+            output.add(templateParam);
+        }
+    }
+
+    private void addApiTemplateParam(String tagName, String serviceType, String version, String apiVersion,
+                                       List<Object> allTmpModels, List<Object> allTmpOperations,
+                                       List<Map<String, Object>> output) {
+        for (String templateName : apiTemplateFiles().keySet()) {
+            Map<String, Object> templateParam = new HashMap<String, Object>();
+            templateParam.put("classVarName", tagName);
+            templateParam.put("serviceType", serviceType);
+            templateParam.put("version", version);
+            templateParam.put("allmodels", allTmpModels);
+            templateParam.put("alloperations", allTmpOperations);
+            String suffix = apiTemplateFiles().get(templateName);
+
+            String folderName = getFolderNameByTagName(tagName);
+            templateParam.put("folderName", folderName);
+            String preName = templateName.split("\\.")[0];
+            // eg: /tmp/1_0_0/compute/v1/instance/request.go
+            String filename = (apiFileFolder() + version + File.separator + serviceType + File.separator
+                    + apiVersion + File.separator + folderName + File.separator + preName + suffix);
+            if (!super.shouldOverwrite(filename) && new File(filename).exists()) {
+                LOGGER.info("Skipped overwriting " + filename);
+                continue;
+            }
+            templateParam.put("templateName", templateName);
+            templateParam.put("filename", filename);
+            output.add(templateParam);
+        }
+    }
+
+    private String getFolderNameByTagName(String tagName) {
+        String folderName = "";
+        if (tagName != null) {
+            char c = tagName.charAt(tagName.length() - 1);
+            String tmp = Character.toString(c);
+            if (tmp.equals("s")) {
+                folderName = tagName;
+            } else {
+                folderName = tagName + "s";
+            }
+        }
+
+        return folderName;
+    }
+
+    private void resetOperationId(List<Object> allTmpOperations, List<Object> allTmpModels, String tagName) {
+        for (Object allItems : allTmpOperations) {
+            Map<String, Object> item = (Map<String, Object>) allItems;
+            if (!item.containsKey("operations")) {
+                continue;
+            }
+
+            Map<String, Object> operations = (Map<String, Object>) item.get("operations");
+            if (!operations.containsKey("operation")) {
+                continue;
+            }
+            List<CodegenOperation> operation = (List<CodegenOperation>) operations.get("operation");
+
+            Map<String, String> newApiOpIds = getApiReqFuncName(operation);
+
+            for (CodegenOperation op : operation) {
+                boolean hasQueryPage = false;
+                if (op.queryParams.size() > 0) {
+                    hasQueryPage = true;
+                }
+
+                String newOpId = newApiOpIds.get(op.operationId.toString());
+                op.vendorExtensions.put("x-nickname", newOpId);
+                op.vendorExtensions.put("x-nicknameLowerCase", newOpId.substring(0, 1).toLowerCase() + newOpId.substring(1));
+
+                if (hasQueryPage == false) {
+                    continue;
+                }
+                Map<String, String> newClassNames = getNewClassNamesByTagName(tagName);
+                if (newClassNames.containsKey(newOpId)) {
+                    op.vendorExtensions.put("x-classname", newClassNames.get(newOpId));
+                    op.vendorExtensions.put("x-classnameLowerCase", newClassNames.get(newOpId).toLowerCase());
+                } else {
+                    if (op.returnBaseType != null) {
+                        LOGGER.info("::::::::::::::::::::op.returnBaseType.toString()=" + op);
+                        String originalClassname = getIrregularClassName(toModelName(op.returnBaseType.toString()));
+                        op.vendorExtensions.put("x-classname", originalClassname);
+                        op.vendorExtensions.put("x-classnameLowerCase", originalClassname.toLowerCase());
+                    }
+                }
+            }
+
+            resetModelNames(newApiOpIds, allTmpModels, tagName);
+        }
+    }
+
+    private Map<String, String> getNewClassNamesByTagName(String tagName) {
+        Map<String, String> newClassNames = new HashMap<String, String>();
+        newClassNames.put("Get", toModelName(tagName));
+        newClassNames.put("List", toModelName(tagName) + "s");
+        newClassNames.put("Create", "Create" + toModelName(tagName));
+
+        return newClassNames;
+    }
+
+    private void resetModelNames(Map<String, String> newApiOpIds, List<Object> allTmpModels, String tagName) {
+        Map<String, String> newClassNames = getNewClassNamesByTagName(tagName);
+        for (int i = 0; i < allTmpModels.size(); i++) {
+            Map<String, Object> model = (Map<String, Object>) allTmpModels.get(i);
+            CodegenModel m = (CodegenModel) model.get("model");
+
+            // reset operationId in model
+            if (model.containsKey("nickname") && newApiOpIds.containsKey(model.get("nickname").toString())) {
+                String newOpId = newApiOpIds.get(model.get("nickname").toString());
+                m.vendorExtensions.put("x-nickname", newOpId);
+                m.vendorExtensions.put("x-nicknameLowerCase", newOpId.substring(0, 1).toLowerCase() + newOpId.substring(1));
+            }
+
+            if (model.containsKey("isExtractInfo") && (boolean) model.get("isExtractInfo") == true) {
+                if (m.vendorExtensions.containsKey("x-nickname")) {
+                    String newOpId = m.vendorExtensions.get("x-nickname").toString();
+                    if (newClassNames.containsKey(newOpId)) {
+                        m.vendorExtensions.put("x-classname", newClassNames.get(newOpId));
+                        m.vendorExtensions.put("x-classnameLowerCase", newClassNames.get(newOpId).toLowerCase());
+                    } else {
+                        String originalClassname = getIrregularClassName(m.classname.toString());
+                        m.vendorExtensions.put("x-classname", originalClassname);
+                        m.vendorExtensions.put("x-classnameLowerCase", originalClassname.toLowerCase());
+                    }
+                }
+            }
+        }
+    }
+
+    private String getIrregularClassName(String originalClassName) {
+        List<String> methods = Arrays.asList("Create", "Delete", "Get", "List", "Update", "Resp");
+        String newClassName = originalClassName;
+
+        for (int i = 0; i < methods.size(); i++){
+            String method = methods.get(i);
+            if (newClassName.contains(method)) {
+                newClassName = newClassName.replace(method, "");
+            }
+        }
+
+        if (newClassName == "") {
+            newClassName = originalClassName;
+        }
+
+        return newClassName;
+    }
     @Override
     public List<Map<String, Object>> writeApiModelToFile(List<File> files, List<Object> allOperations, List<Object> allModels, Swagger swagger)
     {
@@ -288,29 +459,13 @@ public class GoClientCodegen extends AbstractGoCodegen {
                         List<Object> allTmpOperations = getOpTmpDataByTagApiVersion(allOperations, tagName, apiVersion);
                         List<Object> allTmpModels = getModelTmpDataByTagApiVersion(allModels, tagName, apiVersion);
 
-                        if (allTmpOperations.isEmpty()) {
-                            continue;
-                        }
-
-                        Map<String, Object> templateParam = new HashMap<String, Object>();
-                        templateParam.put("classVarName", tagName);
-                        templateParam.put("serviceType", serviceType);
-                        templateParam.put("version", version);
-                        templateParam.put("allmodels", allTmpModels);
-                        templateParam.put("alloperations", allTmpOperations);
-
-                        String preName = templateName.split("\\.")[0];
-                        // eg: /tmp/1_0_0/compute/v1/instance/request.go
-                        String filename = (apiFileFolder() + version + File.separator + serviceType + File.separator
-                                + apiVersion + File.separator + tag.getName() + File.separator + preName + suffix);
-                        if (!super.shouldOverwrite(filename) && new File(filename).exists()) {
-                            LOGGER.info("Skipped overwriting " + filename);
-                            continue;
-                        }
-                        templateParam.put("templateName", templateName);
-                        templateParam.put("filename", filename);
-                        output.add(templateParam);
+                    if (allTmpOperations.isEmpty()) {
+                        continue;
                     }
+                    resetOperationId(allTmpOperations, allTmpModels, tagName);
+
+                    addApiTemplateParam(tagName, serviceType, version, apiVersion, allTmpModels, allTmpOperations, output);
+//                    addApiTestTemplateParam(tagName, serviceType, version, apiVersion, allTmpModels, allTmpOperations, output);
                 }
             }
         } catch (Exception e) {
@@ -335,7 +490,7 @@ public class GoClientCodegen extends AbstractGoCodegen {
                 if (op.path == null) {
                     continue;
                 }
-                String opVersion = getVersionByPath(op.path.toString());
+                String opVersion = getVersionByOp(op);
                 if (!opVersion.isEmpty() && (!allApiVersions.contains(opVersion))) {
                     allApiVersions.add(opVersion);
                 }
@@ -348,21 +503,195 @@ public class GoClientCodegen extends AbstractGoCodegen {
         path = path.toLowerCase();
         String pattern = "v?[0-9]+\\.?[0-9]*";
         for (String p : path.split("/")) {
-            boolean isMatch = Pattern.matches(pattern, p);
-            if (isMatch == true) {
+            if (isMatchVersionPattern(p) == true) {
                 return p;
             }
         }
         return "";
     }
 
+    private boolean isMatchVersionPattern(String version) {
+        if (version == "") {
+            return false;
+        }
+
+        version = version.toLowerCase();
+        String pattern = "v?[0-9]+\\.?[0-9]*";
+        boolean isMatch = Pattern.matches(pattern, version);
+
+        return isMatch;
+    }
+
+    private String getVersionByOp(CodegenOperation op) {
+        String apiVersion = "";
+        if ((boolean) op.isDeprecated == true) {
+            return apiVersion;
+        }
+
+        if (op.vendorExtensions.containsKey("x-version")) {
+            apiVersion = op.vendorExtensions.get("x-version").toString();
+        } else {
+            apiVersion = getVersionByPath(op.path.toString());
+        }
+
+        apiVersion = getStandardVersion(apiVersion);
+        return apiVersion;
+    }
+
+    private String getStandardVersion(String version) {
+        String apiVersion = "";
+        if (isMatchVersionPattern(version) == true) {
+            apiVersion = version;
+            String[] v = version.split(".");
+            if (v.length > 1) {
+                String decimal = v[1];
+                if (decimal.equals("0")) {
+                    apiVersion = v[0];
+                }
+            }
+        }
+        return apiVersion.toLowerCase();
+    }
+
+    private void reduceDupName(String newApiFunName, CodegenOperation op, Map<String, Object> apiIds) {
+        CodegenOperation preDupOp = (CodegenOperation) apiIds.get(newApiFunName);
+        CodegenOperation originMethodNameOp = preDupOp;
+        CodegenOperation resetOp = op;
+
+//        LOGGER.info("############ zhongjun reduceDupNamereduceDupName ############");
+
+        boolean changeOp = false;
+        if (newApiFunName == "Get") {
+//            List<Tag> tags = op.tags
+            String tagName = op.baseName.toString().toLowerCase();
+            String preOpId = preDupOp.operationId.toString().toLowerCase();
+            String opId = op.operationId.toString().toLowerCase();
+
+//            LOGGER.info("############ zhongjun reduceDupNamereduceDupName ############tagName=" + tagName + ", preOpId=" + preOpId + ", opId=" + opId);
+
+            if ((!preOpId.contains(tagName)) && opId.contains(tagName)) {
+                changeOp = true;
+            } else if (preDupOp.queryParams.size() > op.queryParams.size()) {
+                changeOp = true;
+            }
+        } else if (newApiFunName == "Create" || newApiFunName == "Update") {
+            if (preDupOp.bodyParams.size() > op.bodyParams.size()) {
+                changeOp = true;
+            }
+        } else if (preDupOp.path.length() > op.path.length()) {
+            changeOp = true;
+        }
+
+        if (changeOp == true) {
+            resetOp = preDupOp;
+            originMethodNameOp = op;
+        }
+
+        String resetOpNewApiFunName = getApiFunNameByOpId(resetOp, apiIds);
+        apiIds.put(resetOpNewApiFunName, resetOp);
+        apiIds.put(newApiFunName, originMethodNameOp);
+    }
+
+    private String getApiFunNameByOpIdMethod(String opId) {
+        String newApiFunName = "";
+        Map<String, String> apiOpIdContansMethods = new HashMap<String, String>();
+        apiOpIdContansMethods.put("create", "Create");
+        apiOpIdContansMethods.put("update", "Update");
+        apiOpIdContansMethods.put("list", "List");
+        apiOpIdContansMethods.put("get", "Get");
+        apiOpIdContansMethods.put("batch", "List");
+        apiOpIdContansMethods.put("modify", "Update");
+
+        for (String method : apiOpIdContansMethods.keySet()) {
+            if (opId.contains(method)) {
+                newApiFunName = apiOpIdContansMethods.get(method);
+                break;
+            }
+        }
+
+        return newApiFunName;
+    }
+
+    private String getApiFunNameByOpId(CodegenOperation op, Map<String, Object> apiIds) {
+//        LOGGER.info("############ zhongjun getApiFunNameByOpId enter enter ############");
+//        String newApiFunName = "";
+        String tmpOpId = op.operationId.toString();
+        String baseName = op.baseName.toString();
+
+//        LOGGER.info("############ zhongjun getApiFunNameByOpId ############basename=" + baseName + ", tmpOpId=" + tmpOpId);
+        String newApiFunName = tmpOpId.replace(baseName, "");
+        if (newApiFunName.length() < 2) {
+            newApiFunName = tmpOpId;
+        }
+
+        if (apiIds.containsKey(newApiFunName)) {
+            newApiFunName = tmpOpId;
+        }
+
+//        LOGGER.info("############ zhongjun getApiFunNameByOpId ############newApiFunName=" + newApiFunName + ", tmpOpId=" + tmpOpId);
+        return newApiFunName;
+    }
+
+    private String getApiFunNameByMethod(CodegenOperation op) {
+        String newApiFunName = "";
+        Map<String, String> apiMethods = new HashMap<String, String>();
+        apiMethods.put("x-is-delete-method", "Delete");
+        apiMethods.put("x-is-get-method", "Get");
+
+        for (String mt : apiMethods.keySet()) {
+            if (op.vendorExtensions.containsKey(mt)) {
+                newApiFunName = apiMethods.get(mt);
+                break;
+            }
+        }
+
+        return newApiFunName;
+    }
+
+    private Map<String, String> getApiReqFuncName(List<CodegenOperation> operation) {
+        String newApiFunName = "";
+        Map<String, Object> apiIds = new HashMap<String, Object>();
+        for (CodegenOperation op : operation) {
+            String opId = op.operationId.toString().toLowerCase();
+            newApiFunName = getApiFunNameByOpIdMethod(opId);
+
+            if (newApiFunName == "") {
+                newApiFunName = getApiFunNameByMethod(op);
+            }
+
+            if (newApiFunName == "") {
+                newApiFunName = getApiFunNameByOpId(op, apiIds);
+            }
+
+            if (apiIds.containsKey(newApiFunName)){
+                reduceDupName(newApiFunName, op, apiIds);
+            } else {
+                apiIds.put(newApiFunName, op);
+            }
+        }
+
+        Map<String, String> outPutApiIds = new HashMap<String, String>();
+        for (String name : apiIds.keySet()) {
+            CodegenOperation tmpOp = (CodegenOperation) apiIds.get(name);
+            outPutApiIds.put(tmpOp.operationId.toString(), name);
+        }
+
+        return outPutApiIds;
+    }
+
     private List<Object> getModelTmpDataByTagApiVersion(List<Object> allModels, String tagName, String apiVersion){
         List<Object> allTmpModels = new ArrayList<Object>();
         for (int i = 0; i < allModels.size(); i++) {
             Map<String, Object> model = (Map<String, Object>) allModels.get(i);
+
+            if (model.containsKey("isDeprecated") && (boolean) model.get("isDeprecated") == true) {
+                continue;
+            }
+
             if (!model.containsKey("tagsInfo")) {
                 continue;
             }
+
             List<Object> tagsInfo = (List<Object>) model.get("tagsInfo");
             for (int iInfo = 0; iInfo < tagsInfo.size(); iInfo++) {
                 Map<String, Object> tagInfo = (Map<String, Object>) tagsInfo.get(iInfo);
@@ -373,24 +702,34 @@ public class GoClientCodegen extends AbstractGoCodegen {
                 String modelapiVersion = tagInfo.get("apiVersion").toString();
 
                 if (tagName.equals(modelTagName) && apiVersion.equals(modelapiVersion)) {
+                    Map<String, Object> tmpModel = new HashMap<String, Object>();
+                    copyModel(model, tmpModel);
+
                     if (tagInfo.containsKey("isReq") && (boolean) tagInfo.get("isReq")) {
-                        model.put("isReq", tagInfo.get("isReq"));
+                        tmpModel.put("isReq", tagInfo.get("isReq"));
                     } else{
-                        model.put("isReq", false);
+                        tmpModel.put("isReq", false);
                     }
 
                     if (tagInfo.containsKey("isResp") && (boolean) tagInfo.get("isResp")) {
-                        model.put("isResp", tagInfo.get("isResp"));
+                        tmpModel.put("isResp", tagInfo.get("isResp"));
                     } else{
-                        model.put("isResp", false);
+                        tmpModel.put("isResp", false);
                     }
 
-                    allTmpModels.add(model);
+                    allTmpModels.add(tmpModel);
                     break;
                 }
             }
         }
         return allTmpModels;
+    }
+
+    private void copyModel(Map<String, Object> oldModel, Map<String, Object> newModel) {
+        for (String key : oldModel.keySet()) {
+            newModel.put(key, oldModel.get(key));
+        }
+        return;
     }
 
     private List<Object> getOpTmpDataByTagApiVersion(List<Object> allOperations, String tagName, String apiVersion){
@@ -416,11 +755,15 @@ public class GoClientCodegen extends AbstractGoCodegen {
                     continue;
                 }
 
-                String opVersion = getVersionByPath(op.path.toString());
+                if ((boolean) op.isDeprecated == true) {
+                    continue;
+                }
+
+                String opVersion = getVersionByOp(op);
                 if (apiVersion.equals(opVersion)) {
                     tmpOperation.add(op);
                 }
-                if (op.queryParams.size() > 0) {
+                if (op.vendorExtensions.containsKey("x-isPage")) {
                     hasQueryParams = true;
                 }
             }
@@ -439,6 +782,4 @@ public class GoClientCodegen extends AbstractGoCodegen {
 
         return  allTmpOperations;
     }
-
-
 }

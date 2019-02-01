@@ -1,27 +1,18 @@
-package {{classVarName}}
+package {{folderName}}
 
 import (
 	"github.com/gophercloud/gophercloud"
     {{#alloperations}}{{#hasQueryPagin}}"github.com/gophercloud/gophercloud/pagination"{{/hasQueryPagin}}{{/alloperations}}
 )
-
-type commonResult struct {
-	gophercloud.Result
-}
-{{#imports}}
-import ({{/imports}}{{#imports}}
-	"{{import}}"{{/imports}}{{#imports}}
-)
-{{/imports}}
 {{#allmodels}}
 {{#model}}
 {{#isResp}}
 {{#isEnum}}
 {{#description}}
-    // {{{classname}}} : {{{description}}}
+    // {{{description}}}
 {{/description}}
 
-type {{{classname}}} {{^format}}{{dataType}}{{/format}}{{#format}}{{{format}}}{{/format}}
+type {{#vendorExtensions.x-classname}}{{vendorExtensions.x-classname}}{{/vendorExtensions.x-classname}}{{^vendorExtensions.x-classname}}{{classname}}{{/vendorExtensions.x-classname}} {{^format}}{{dataType}}{{/format}}{{#format}}{{{format}}}{{/format}}
 // List of {{{name}}}
 const (
 	{{#allowableValues}}
@@ -33,14 +24,14 @@ const (
 	{{/allowableValues}}
 ){{/isEnum}}{{^isEnum}}{{#description}}
 // {{{description}}}{{/description}}
-type {{classname}} struct {
+type {{#vendorExtensions.x-classname}}{{vendorExtensions.x-classname}}{{/vendorExtensions.x-classname}}{{^vendorExtensions.x-classname}}{{classname}}{{/vendorExtensions.x-classname}} struct {
 {{#vars}}
 {{^-first}}
 {{/-first}}
 {{#description}}
 	// {{{description}}}
 {{/description}}
-	{{name}} {{#defaultValue}}{{#vendorExtensions.x-notEqualToJsonDefaultValue}}*{{/vendorExtensions.x-notEqualToJsonDefaultValue}}{{/defaultValue}}{{{datatype}}} `json:"{{baseName}}{{^required}},omitempty{{/required}}"{{#withXml}} xml:"{{baseName}}"{{/withXml}}`
+	{{name}} {{{datatype}}} `json:"{{baseName}}{{^required}},omitempty{{/required}}"{{#withXml}} xml:"{{baseName}}"{{/withXml}}`
 {{/vars}}
 }
 {{/isEnum}}
@@ -55,20 +46,20 @@ type {{classname}} struct {
 type {{{vendorExtensions.x-returnBaseTypeModel}}}s {{{returnType}}}
 {{/isListContainer}}
 {{#vendorExtensions.isExtractInfo}}
-{{#hasQueryParams}}
+{{#vendorExtensions.x-isPage}}
 
-func Extract{{nickname}}(r pagination.Page) ({{^isListContainer}}{{{returnType}}}{{/isListContainer}}{{#isListContainer}}{{{vendorExtensions.x-returnBaseTypeModel}}}s{{/isListContainer}}, error) {
+func Extract{{vendorExtensions.x-nickname}}(r pagination.Page) ({{^isListContainer}}{{{returnType}}}{{/isListContainer}}{{#isListContainer}}{{{vendorExtensions.x-returnBaseTypeModel}}}s{{/isListContainer}}, error) {
 	var s {{^isListContainer}}{{{returnType}}}{{/isListContainer}}{{#isListContainer}}{{{vendorExtensions.x-returnBaseTypeModel}}}s{{/isListContainer}}
-	err := (r.({{nickname}}Page)).ExtractInto(&s)
+	err := (r.({{vendorExtensions.x-nickname}}Page)).ExtractInto(&s)
 	return s, err
 }
 
-type {{nickname}}Page struct {
+type {{vendorExtensions.x-nickname}}Page struct {
 	pagination.LinkedPageBase
 }
 
-func (r {{nickname}}Page) IsEmpty() (bool, error) {
-	s, err := Extract{{nickname}}(r)
+func (r {{vendorExtensions.x-nickname}}Page) IsEmpty() (bool, error) {
+	s, err := Extract{{vendorExtensions.x-nickname}}(r)
 {{^vendorExtensions.isExtractInfo}}
 	return &s == nil, err
 {{/vendorExtensions.isExtractInfo}}
@@ -76,21 +67,21 @@ func (r {{nickname}}Page) IsEmpty() (bool, error) {
 	return len(s) == 0, err
 {{/vendorExtensions.isExtractInfo}}
 }
-{{/hasQueryParams}}
+{{/vendorExtensions.x-isPage}}
 {{/vendorExtensions.isExtractInfo}}
-{{^hasQueryParams}}
+{{^vendorExtensions.x-isPage}}
 
 {{#hasReference}}
-type {{nickname}}Result struct {
-	commonResult
+type {{vendorExtensions.x-nickname}}Result struct {
+	gophercloud.Result
 }
 {{/hasReference}}
 {{^hasReference}}
-type {{nickname}}Result struct {
+type {{vendorExtensions.x-nickname}}Result struct {
 	gophercloud.ErrResult
 }
 {{/hasReference}}
-{{/hasQueryParams}}
+{{/vendorExtensions.x-isPage}}
 {{/operation}}
 {{/operations}}
 {{/alloperations}}
@@ -99,21 +90,46 @@ type {{nickname}}Result struct {
 {{#isExtractInfo}}
 {{^isQueryResponse}}
 
-func (r commonResult) Extract{{classname}}Info() (*{{classname}}, error) {
-	var s {{classname}}
+func (r {{vendorExtensions.x-nickname}}Result) Extract() (*{{vendorExtensions.x-classname}}, error) {
+	var s *{{vendorExtensions.x-classname}}
 	err := r.ExtractInto(&s)
-	return &s, err
+	return s, err
 }
 {{/isQueryResponse}}
 {{#isQueryResponse}}
 
-func Extract{{{nickname}}}(r pagination.Page) ({{classname}}, error) {
-	var s {{classname}}
+func (page {{vendorExtensions.x-classname}}Page) NextPageURL() (string, error) {
+	var s struct {
+		Links []gophercloud.Link `json:"{{vendorExtensions.x-classnameLowerCase}}_links"`
+	}
+	err := page.ExtractInto(&s)
+	if err != nil {
+		return "", err
+	}
+	return gophercloud.ExtractNextURL(s.Links)
+}
+
+func Extract{{vendorExtensions.x-classname}}(r pagination.Page) ({{vendorExtensions.x-classname}}, error) {
+	var s {{vendorExtensions.x-classname}}
 {{#vars}}
 	{{#isContainer}}s.{{name}} = make({{{datatype}}}, 0){{/isContainer}}
 {{/vars}}
-	err := (r.({{{nickname}}}Page)).ExtractInto(&s)
-	return &s, err
+	err := (r.({{vendorExtensions.x-classname}}Page)).ExtractInto(&s)
+	return s, err
+}
+
+type {{vendorExtensions.x-classname}}Page struct {
+	pagination.LinkedPageBase
+}
+
+func (r {{vendorExtensions.x-classname}}Page) IsEmpty() (bool, error) {
+	s, err := Extract{{vendorExtensions.x-classname}}(r)
+{{#isExtractInfo}}
+	return &s == nil, err
+{{/isExtractInfo}}
+{{^isExtractInfo}}
+	return len(s) == 0, err
+{{/isExtractInfo}}
 }
 {{/isQueryResponse}}
  {{/isExtractInfo}}
@@ -123,14 +139,14 @@ func Extract{{{nickname}}}(r pagination.Page) ({{classname}}, error) {
  {{#operations}}
  {{#operation}}
  {{#vendorExtensions.isExtractInfo}}
- {{^hasQueryParams}}
+ {{^vendorExtensions.x-isPage}}
 
- func (r commonResult) Extract{{vendorExtensions.x-returnBaseTypeModel}}sInfo() (*{{vendorExtensions.x-returnBaseTypeModel}}s, error) {
- 	var s {{vendorExtensions.x-returnBaseTypeModel}}s
+ func (r {{vendorExtensions.x-nickname}}Result) Extract() (*{{vendorExtensions.x-returnBaseTypeModel}}s, error) {
+ 	var s *{{vendorExtensions.x-returnBaseTypeModel}}s
  	err := r.ExtractInto(&s)
- 	return &s, err
+ 	return s, err
  }
-{{/hasQueryParams}}
+{{/vendorExtensions.x-isPage}}
 {{/vendorExtensions.isExtractInfo}}
 {{/operation}}
 {{/operations}}
