@@ -450,14 +450,20 @@ public class GoClientCodegen extends AbstractGoCodegen {
             }
 
             serviceType = serviceType.toLowerCase();
-            for (String templateName : apiTemplateFiles().keySet()) {
-                String suffix = apiTemplateFiles().get(templateName);
-                for (Tag tag : swaggerTags) {
-                    String tagName = tag.getName().toLowerCase();
-                    List<String> allApiVersions = getAllApiVersions(allOperations);
-                    for (String apiVersion : allApiVersions) {
-                        List<Object> allTmpOperations = getOpTmpDataByTagApiVersion(allOperations, tagName, apiVersion);
-                        List<Object> allTmpModels = getModelTmpDataByTagApiVersion(allModels, tagName, apiVersion);
+
+            for (Tag tag : swaggerTags) {
+                String tagName = tag.getName().toLowerCase();
+                /////////////del
+//                LOGGER.info("############ swaggerTagsswagge  i=" + tagName);
+//                if (tagName.equals("alarm") || tagName.equals("apiversions") || tagName.equals("quota") || tagName.equals("event")) {
+//                    continue;
+//                }
+                //////////////////del
+                List<String> allApiVersions = getAllApiVersions(allOperations);
+                LOGGER.info("############ swaggerTagsswagge  allApiVersions=" + allApiVersions);
+                for (String apiVersion : allApiVersions) {
+                    List<Object> allTmpOperations = getOpTmpDataByTagApiVersion(allOperations, tagName, apiVersion);
+                    List<Object> allTmpModels = getModelTmpDataByTagApiVersion(allModels, tagName, apiVersion);
 
                     if (allTmpOperations.isEmpty()) {
                         continue;
