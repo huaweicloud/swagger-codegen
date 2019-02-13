@@ -368,7 +368,7 @@ public class GoClientCodegen extends AbstractGoCodegen {
                     op.vendorExtensions.put("x-classnameLowerCase", newClassNames.get(newOpId).toLowerCase());
                 } else {
                     if (op.returnBaseType != null) {
-                        LOGGER.info("::::::::::::::::::::op.returnBaseType.toString()=" + op);
+
                         String originalClassname = getIrregularClassName(toModelName(op.returnBaseType.toString()));
                         op.vendorExtensions.put("x-classname", originalClassname);
                         op.vendorExtensions.put("x-classnameLowerCase", originalClassname.toLowerCase());
@@ -438,7 +438,6 @@ public class GoClientCodegen extends AbstractGoCodegen {
     @Override
     public List<Map<String, Object>> writeApiModelToFile(List<File> files, List<Object> allOperations, List<Object> allModels, Swagger swagger)
     {
-
         String serviceType = swagger.getInfo().getTitle();
         String version = swagger.getInfo().getVersion();
         List<Tag> swaggerTags = swagger.getTags();
@@ -453,14 +452,8 @@ public class GoClientCodegen extends AbstractGoCodegen {
 
             for (Tag tag : swaggerTags) {
                 String tagName = tag.getName().toLowerCase();
-                /////////////del
-//                LOGGER.info("############ swaggerTagsswagge  i=" + tagName);
-//                if (tagName.equals("alarm") || tagName.equals("apiversions") || tagName.equals("quota") || tagName.equals("event")) {
-//                    continue;
-//                }
-                //////////////////del
+
                 List<String> allApiVersions = getAllApiVersions(allOperations);
-                LOGGER.info("############ swaggerTagsswagge  allApiVersions=" + allApiVersions);
                 for (String apiVersion : allApiVersions) {
                     List<Object> allTmpOperations = getOpTmpDataByTagApiVersion(allOperations, tagName, apiVersion);
                     List<Object> allTmpModels = getModelTmpDataByTagApiVersion(allModels, tagName, apiVersion);
@@ -469,7 +462,6 @@ public class GoClientCodegen extends AbstractGoCodegen {
                         continue;
                     }
                     resetOperationId(allTmpOperations, allTmpModels, tagName);
-
                     addApiTemplateParam(tagName, serviceType, version, apiVersion, allTmpModels, allTmpOperations, output);
 //                    addApiTestTemplateParam(tagName, serviceType, version, apiVersion, allTmpModels, allTmpOperations, output);
                 }
@@ -564,16 +556,12 @@ public class GoClientCodegen extends AbstractGoCodegen {
         CodegenOperation originMethodNameOp = preDupOp;
         CodegenOperation resetOp = op;
 
-//        LOGGER.info("############ zhongjun reduceDupNamereduceDupName ############");
 
         boolean changeOp = false;
         if (newApiFunName == "Get") {
-//            List<Tag> tags = op.tags
             String tagName = op.baseName.toString().toLowerCase();
             String preOpId = preDupOp.operationId.toString().toLowerCase();
             String opId = op.operationId.toString().toLowerCase();
-
-//            LOGGER.info("############ zhongjun reduceDupNamereduceDupName ############tagName=" + tagName + ", preOpId=" + preOpId + ", opId=" + opId);
 
             if ((!preOpId.contains(tagName)) && opId.contains(tagName)) {
                 changeOp = true;
@@ -619,12 +607,9 @@ public class GoClientCodegen extends AbstractGoCodegen {
     }
 
     private String getApiFunNameByOpId(CodegenOperation op, Map<String, Object> apiIds) {
-//        LOGGER.info("############ zhongjun getApiFunNameByOpId enter enter ############");
-//        String newApiFunName = "";
         String tmpOpId = op.operationId.toString();
         String baseName = op.baseName.toString();
 
-//        LOGGER.info("############ zhongjun getApiFunNameByOpId ############basename=" + baseName + ", tmpOpId=" + tmpOpId);
         String newApiFunName = tmpOpId.replace(baseName, "");
         if (newApiFunName.length() < 2) {
             newApiFunName = tmpOpId;
@@ -634,7 +619,6 @@ public class GoClientCodegen extends AbstractGoCodegen {
             newApiFunName = tmpOpId;
         }
 
-//        LOGGER.info("############ zhongjun getApiFunNameByOpId ############newApiFunName=" + newApiFunName + ", tmpOpId=" + tmpOpId);
         return newApiFunName;
     }
 
