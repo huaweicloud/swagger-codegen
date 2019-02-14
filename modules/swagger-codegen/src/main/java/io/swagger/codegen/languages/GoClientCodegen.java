@@ -261,6 +261,19 @@ public class GoClientCodegen extends AbstractGoCodegen {
         return null;
     }
 
+    @Override
+    public String getApiVersionByOp(CodegenOperation op) {
+        String apiVersion = "";
+        if ((boolean) op.isDeprecated == true) {
+            return apiVersion;
+        }
+
+        apiVersion = super.getApiVersionByOp(op);
+
+        apiVersion = getStandardVersion(apiVersion);
+        return apiVersion;
+    }
+
     public void setPackageVersion(String packageVersion) {
         this.packageVersion = packageVersion;
     }
@@ -435,6 +448,7 @@ public class GoClientCodegen extends AbstractGoCodegen {
 
         return newClassName;
     }
+
     @Override
     public List<Map<String, Object>> writeApiModelToFile(List<File> files, List<Object> allOperations, List<Object> allModels, Swagger swagger)
     {
@@ -488,7 +502,7 @@ public class GoClientCodegen extends AbstractGoCodegen {
                 if (op.path == null) {
                     continue;
                 }
-                String opVersion = getVersionByOp(op);
+                String opVersion = getApiVersionByOp(op);
                 if (!opVersion.isEmpty() && (!allApiVersions.contains(opVersion))) {
                     allApiVersions.add(opVersion);
                 }
@@ -497,55 +511,13 @@ public class GoClientCodegen extends AbstractGoCodegen {
         return  allApiVersions;
     }
 
-    private String getVersionByPath(String path) {
-        path = path.toLowerCase();
-        String pattern = "v?[0-9]+\\.?[0-9]*";
-        for (String p : path.split("/")) {
-            if (isMatchVersionPattern(p) == true) {
-                return p;
-            }
-        }
-        return "";
-    }
-
-    private boolean isMatchVersionPattern(String version) {
-        if (version == "") {
-            return false;
-        }
-
-        version = version.toLowerCase();
-        String pattern = "v?[0-9]+\\.?[0-9]*";
-        boolean isMatch = Pattern.matches(pattern, version);
-
-        return isMatch;
-    }
-
-    private String getVersionByOp(CodegenOperation op) {
-        String apiVersion = "";
-        if ((boolean) op.isDeprecated == true) {
-            return apiVersion;
-        }
-
-        if (op.vendorExtensions.containsKey("x-version")) {
-            apiVersion = op.vendorExtensions.get("x-version").toString();
-        } else {
-            apiVersion = getVersionByPath(op.path.toString());
-        }
-
-        apiVersion = getStandardVersion(apiVersion);
-        return apiVersion;
-    }
-
     private String getStandardVersion(String version) {
-        String apiVersion = "";
-        if (isMatchVersionPattern(version) == true) {
-            apiVersion = version;
-            String[] v = version.split(".");
-            if (v.length > 1) {
-                String decimal = v[1];
-                if (decimal.equals("0")) {
-                    apiVersion = v[0];
-                }
+        String apiVersion = version;
+        String[] v = version.split("\\.");
+        if (v.length > 1) {
+            String decimal = v[1];
+            if (decimal.equals("0")) {
+                apiVersion = v[0];
             }
         }
         return apiVersion.toLowerCase();
@@ -555,7 +527,6 @@ public class GoClientCodegen extends AbstractGoCodegen {
         CodegenOperation preDupOp = (CodegenOperation) apiIds.get(newApiFunName);
         CodegenOperation originMethodNameOp = preDupOp;
         CodegenOperation resetOp = op;
-
 
         boolean changeOp = false;
         if (newApiFunName == "Get") {
@@ -749,7 +720,7 @@ public class GoClientCodegen extends AbstractGoCodegen {
                     continue;
                 }
 
-                String opVersion = getVersionByOp(op);
+                String opVersion = getApiVersionByOp(op);
                 if (apiVersion.equals(opVersion)) {
                     tmpOperation.add(op);
                 }

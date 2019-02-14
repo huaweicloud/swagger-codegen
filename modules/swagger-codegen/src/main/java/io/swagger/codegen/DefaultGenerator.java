@@ -902,7 +902,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
                     tagName = op.tags.get(0).getName().toLowerCase();
                 }
 
-                String apiVersion = getVersionByOp(op);
+                String apiVersion = config.getApiVersionByOp(op);
                 boolean isDeprecated = getIsDeprecated(op);
                 if (reqBaseType != null && modelMap.containsKey(reqBaseType)) {
                     setTagsInfo(modelMap.get(reqBaseType), tagName, apiVersion, true, false);
@@ -1167,7 +1167,7 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         }
 
         String path = op.path.toLowerCase();
-        String version = getVersionByPath(path);
+        String version = config.getVersionByPath(path);
         List<String> pathDetail = new ArrayList<String>();
         String pattern = "\\{[\\w]+\\}";
         boolean isMatch = false;
@@ -1197,55 +1197,6 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
             }
         }
         return;
-    }
-
-    private String getVersionByPath(String path) {
-        path = path.toLowerCase();
-        for (String p : path.split("/")) {
-            if (isMatchVersionPattern(p) == true) {
-                return p;
-            }
-        }
-        return "";
-    }
-
-    private boolean isMatchVersionPattern(String version) {
-        if (version == "") {
-            return false;
-        }
-
-        version = version.toLowerCase();
-        String pattern = "v?[0-9]+\\.?[0-9]*";
-        boolean isMatch = Pattern.matches(pattern, version);
-
-        return isMatch;
-    }
-
-    private String getVersionByOp(CodegenOperation op) {
-        String apiVersion = "";
-        if (op.vendorExtensions.containsKey("x-version")) {
-            apiVersion = op.vendorExtensions.get("x-version").toString();
-        } else {
-            apiVersion = getVersionByPath(op.path.toString());
-        }
-
-        apiVersion = getStandardVersion(apiVersion);
-        return apiVersion;
-    }
-
-    private String getStandardVersion(String version) {
-        String apiVersion = "";
-        if (isMatchVersionPattern(version) == true) {
-            apiVersion = version;
-            String[] v = version.split(".");
-            if (v.length > 1) {
-                String decimal = v[1];
-                if (decimal.equals("0")) {
-                    apiVersion = v[0];
-                }
-            }
-        }
-        return apiVersion.toLowerCase();
     }
 
     private void writeAllApiModelToFile(List<File> files, List<Object> allOperations, List<Object> allModels, Swagger swagger) {

@@ -228,4 +228,8 @@ public interface CodegenConfig {
     String getModelKey(Object o);
 
     String getRequestKey(Object o);
+
+    String getApiVersionByOp(CodegenOperation op);
+	
+    String getVersionByPath(String path);
 }
