@@ -4,10 +4,12 @@ package {{packagename}};
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.Maps;
 
 import {{importpackagename}}.*;
 import com.huawei.openstack4j.model.common.ActionResponse;
@@ -68,28 +70,45 @@ public class {{apiImplClassName}} extends {{apiBaseClassName}} {
         {{/bodyParams}}
         {{/hasBodyParam}}
 
+        {{#hasQueryParams}}
+        HashMap<String, Object> parameters = Maps.newHashMap();
+        {{#queryParams}}
+        parameters.put("{{{paramName}}}", {{{paramName}}});
+        {{/queryParams}}
+
         {{#vendorExtensions.x-is-get-method}}
         {{#vendorExtensions.isExtractInfo}}
-        return get({{#returnBaseType}}{{{returnBaseType}}}.{{{returnBaseType}}}s{{/returnBaseType}}.class, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/{{{paramName}}}"{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}}).execute().getList();
+        return get({{#returnBaseType}}{{{returnBaseType}}}.{{{returnBaseType}}}s{{/returnBaseType}}.class, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/" + {{{paramName}}}{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}}).params(parameters).execute().getList();
         {{/vendorExtensions.isExtractInfo}}
         {{^vendorExtensions.isExtractInfo}}
-        return get({{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}ActionResponse{{/returnType}}.class, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/{{{paramName}}}"{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}}).execute();
+        return get({{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}ActionResponse{{/returnType}}.class, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/" + {{{paramName}}}{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}}).params(parameters).execute();
         {{/vendorExtensions.isExtractInfo}}
         {{/vendorExtensions.x-is-get-method}}
-        {{#vendorExtensions.x-is-post-method}}
+        {{/hasQueryParams}}
+        {{^hasQueryParams}}
+        {{#vendorExtensions.x-is-get-method}}
         {{#vendorExtensions.isExtractInfo}}
-        return post({{#returnBaseType}}{{{returnBaseType}}}.{{{returnBaseType}}}s{{/returnBaseType}}.class, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/{{{paramName}}}"{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}}).entity({{#hasBodyParam}}{{#bodyParams}}{{{paramName}}}{{/bodyParams}}{{/hasBodyParam}}).execute().getList();
+        return get({{#returnBaseType}}{{{returnBaseType}}}.{{{returnBaseType}}}s{{/returnBaseType}}.class, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/" + {{{paramName}}}{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}}).execute().getList();
         {{/vendorExtensions.isExtractInfo}}
         {{^vendorExtensions.isExtractInfo}}
-        return post({{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}ActionResponse{{/returnType}}.class, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/{{{paramName}}}"{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}}).entity({{#hasBodyParam}}{{#bodyParams}}{{{paramName}}}{{/bodyParams}}{{/hasBodyParam}}).execute();
+        return get({{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}ActionResponse{{/returnType}}.class, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/" + {{{paramName}}}{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}}).execute();
+        {{/vendorExtensions.isExtractInfo}}
+        {{/vendorExtensions.x-is-get-method}}
+        {{/hasQueryParams}}
+        {{#vendorExtensions.x-is-post-method}}
+        {{#vendorExtensions.isExtractInfo}}
+        return post({{#returnBaseType}}{{{returnBaseType}}}.{{{returnBaseType}}}s{{/returnBaseType}}.class, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/" + {{{paramName}}}{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}}).entity({{#hasBodyParam}}{{#bodyParams}}{{{paramName}}}{{/bodyParams}}{{/hasBodyParam}}).execute().getList();
+        {{/vendorExtensions.isExtractInfo}}
+        {{^vendorExtensions.isExtractInfo}}
+        return post({{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}ActionResponse{{/returnType}}.class, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/" + {{{paramName}}}{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}}).entity({{#hasBodyParam}}{{#bodyParams}}{{{paramName}}}{{/bodyParams}}{{/hasBodyParam}}).execute();
         {{/vendorExtensions.isExtractInfo}}
         {{/vendorExtensions.x-is-post-method}}
         {{#vendorExtensions.x-is-put-method}}
         {{#vendorExtensions.isExtractInfo}}
-        return put({{#returnBaseType}}{{{returnBaseType}}}.{{{returnBaseType}}}s{{/returnBaseType}}.class, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/{{{paramName}}}"{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}}).entity({{#hasBodyParam}}{{#bodyParams}}{{{paramName}}}{{/bodyParams}}{{/hasBodyParam}}).execute().getList();
+        return put({{#returnBaseType}}{{{returnBaseType}}}.{{{returnBaseType}}}s{{/returnBaseType}}.class, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/" + {{{paramName}}}{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}}).entity({{#hasBodyParam}}{{#bodyParams}}{{{paramName}}}{{/bodyParams}}{{/hasBodyParam}}).execute().getList();
         {{/vendorExtensions.isExtractInfo}}
         {{^vendorExtensions.isExtractInfo}}
-        return put({{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}ActionResponse{{/returnType}}.class, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/{{{paramName}}}"{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}}).entity({{#hasBodyParam}}{{#bodyParams}}{{{paramName}}}{{/bodyParams}}{{/hasBodyParam}}).execute();
+        return put({{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}ActionResponse{{/returnType}}.class, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/" + {{{paramName}}}{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}}).entity({{#hasBodyParam}}{{#bodyParams}}{{{paramName}}}{{/bodyParams}}{{/hasBodyParam}}).execute();
         {{/vendorExtensions.isExtractInfo}}
         {{/vendorExtensions.x-is-put-method}}
     }
@@ -136,7 +155,7 @@ public class {{apiImplClassName}} extends {{apiBaseClassName}} {
         {{/hasBodyParam}}
 
         return ToActionResponseFunction.INSTANCE
-                .apply(delete(Void.class, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/{{{paramName}}}"{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}})
+                .apply(delete(Void.class, {{#vendorExtensions.x-resourcePath}}"/{{{vendorExtensions.x-resourcePath}}}"{{/vendorExtensions.x-resourcePath}}{{#pathParams}}{{^vendorExtensions.x-isProject}} + "/" + {{{paramName}}}{{/vendorExtensions.x-isProject}}{{/pathParams}}{{#vendorExtensions.x-originPath}} + "/{{{vendorExtensions.x-originPath}}}"{{/vendorExtensions.x-originPath}})
                         .executeWithResponse());
     }
     {{/vendorExtensions.x-is-delete-method}}
