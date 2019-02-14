@@ -3932,4 +3932,40 @@ public class DefaultCodegen {
         }
         return requestKey;
     }
+
+    public String getApiVersionByOp(CodegenOperation op) {
+        String apiVersion = "";
+        if (op.vendorExtensions.containsKey("x-version")) {
+            apiVersion = op.vendorExtensions.get("x-version").toString();
+            if (isMatchVersionPattern(apiVersion) == false) {
+                return "";
+            }
+        } else {
+            apiVersion = getVersionByPath(op.path.toString());
+        }
+
+        return apiVersion;
+    }
+
+    public String getVersionByPath(String path) {
+        path = path.toLowerCase();
+        for (String p : path.split("/")) {
+            if (isMatchVersionPattern(p) == true) {
+                return p;
+            }
+        }
+        return "";
+    }
+
+    private boolean isMatchVersionPattern(String version) {
+        if (version == "") {
+            return false;
+        }
+
+        version = version.toLowerCase();
+        String pattern = "v?[0-9]+\\.?[0-9]*";
+        boolean isMatch = Pattern.matches(pattern, version);
+
+        return isMatch;
+    }
 }
