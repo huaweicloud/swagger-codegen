@@ -750,10 +750,7 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                         }
 
                         // get version
-                        String version = apiVersion.replaceAll("[.]", "_").replaceAll("[_0]", "");
-                        if (!apiVersion.startsWith("v")) {
-                            version = "v" + apiVersion;
-                        }
+                        String version = getStandardVersion(apiVersion);
 
                         // generate files by models
                         for (Object tmpModel : allTmpModels) {
@@ -820,10 +817,7 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                 }
 
                 // get version
-                String version = apiVersion.replaceAll("[.]", "_").replaceAll("[_0]", "");
-                if (!apiVersion.startsWith("v")) {
-                    version = "v" + apiVersion;
-                }
+                String version = getStandardVersion(apiVersion);
 
                 // eg: com.huawei.openstack4j.openstack.csbs.v1.internal
                 String packagename = apiPackage + "." + serviceType.toLowerCase() + "." + version + "."
@@ -855,10 +849,7 @@ public class JavaClientCodegen extends AbstractJavaCodegen
             for (String apiVersion : allApiVersions) {
                 List<Map<String, Object>> apiImplClassNames = new ArrayList<>();
                 // get version
-                String version = apiVersion.replaceAll("[.]", "_").replaceAll("[_0]", "");
-                if (!apiVersion.startsWith("v")) {
-                    version = "v" + apiVersion;
-                }
+                String version = getStandardVersion(apiVersion);
                 for (Tag tag : swaggerTags) {
                     String tagName = tag.getName().toLowerCase();
                     List<Object> allTmpOperations = getOpTmpDataByTagApiVersion(allOperations, tagName, apiVersion);
@@ -1028,7 +1019,7 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                 if (op.path == null) {
                     continue;
                 }
-                String opVersion = getVersionByPath(op.path.toString());
+                String opVersion = getApiVersionByOp(op);
                 if (!opVersion.isEmpty() && (!allApiVersions.contains(opVersion))) {
                     allApiVersions.add(opVersion);
                 }
@@ -1037,16 +1028,21 @@ public class JavaClientCodegen extends AbstractJavaCodegen
         return allApiVersions;
     }
 
-    private String getVersionByPath(String path) {
-        path = path.toLowerCase();
-        String pattern = "v?[0-9]+\\.?[0-9]*";
-        for (String p : path.split("/")) {
-            boolean isMatch = Pattern.matches(pattern, p);
-            if (isMatch == true) {
-                return p;
+    @Override
+    public String getApiVersionByOp(CodegenOperation op) {
+        return super.getVersionByPath(op.path.toString());
+    }
+
+    private String getStandardVersion(String version) {
+        String apiVersion = version;
+        String[] v = version.split("\\.");
+        if (v.length > 1) {
+            String decimal = v[1];
+            if (decimal.equals("0")) {
+                apiVersion = v[0];
             }
         }
-        return "";
+        return apiVersion.toLowerCase();
     }
 
     private List<Object> getModelTmpDataByTagApiVersion(List<Object> allModels, String tagName, String apiVersion) {
@@ -1109,11 +1105,11 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                     continue;
                 }
 
-                String opVersion = getVersionByPath(op.path.toString());
+                String opVersion = getApiVersionByOp(op);
                 if (apiVersion.equals(opVersion)) {
                     tmpOperation.add(op);
                 }
-                if (op.queryParams.size() > 0) {
+                if (op.vendorExtensions.containsKey("x-isPage")) {
                     hasQueryParams = true;
                 }
             }
@@ -1191,11 +1187,11 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                     continue;
                 }
 
-                String opVersion = getVersionByPath(op.path.toString());
+                String opVersion = getApiVersionByOp(op);
                 if (apiVersion.equals(opVersion)) {
                     tmpOperation.add(op);
                 }
-                if (op.queryParams.size() > 0) {
+                if (op.vendorExtensions.containsKey("x-isPage")) {
                     hasQueryParams = true;
                 }
             }
