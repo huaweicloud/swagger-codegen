@@ -1,0 +1,40 @@
+{{>licenseInfo}}
+
+package {{packagename}};
+
+import com.google.common.collect.Maps;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * {{#option}}{{#summary}}{{{summary}}}{{/summary}}{{/option}}
+ */
+public class {{classname}} {
+    
+    private Map<String, Object> queryParams = Maps.newHashMap();
+
+    private {{classname}}() {
+    }
+
+    private {{classname}} add(String param, Object value) {
+        if (value != null)
+            this.queryParams.put(param, value);
+        return this;
+    }
+
+    public static {{classname}} create() {
+        return new {{classname}}();
+    }
+
+    public Map<String, Object> getOptions() {
+        return queryParams;
+    }
+    {{#option}}
+    {{#queryParams}}
+
+    public {{classname}} {{{paramName}}}({{{dataType}}} {{{paramName}}}) {
+        return add("{{baseName}}", {{{paramName}}});
+    }
+    {{/queryParams}}
+    {{/option}}
+}

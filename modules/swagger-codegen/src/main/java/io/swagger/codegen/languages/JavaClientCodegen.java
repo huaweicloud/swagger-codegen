@@ -63,6 +63,7 @@ public class JavaClientCodegen extends AbstractJavaCodegen
     protected String extensionApiBase = "extensionapibase.mustache";
     protected String extensionApi = "extensionapi.mustache";
     protected String extensionApiImpl = "extensionapiimpl.mustache";
+    protected String extensionOption = "extensionoption.mustache";
     protected Map<String, String> otherTemplateFiles = new HashMap<String, String>();
     protected String extensionserviceendpoint = "extensionserviceendpoint.mustache";
     protected String extensionservicetype = "extensionservicetype.mustache";
@@ -749,8 +750,51 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                             continue;
                         }
 
+                        // reset
+                        List<Object> optionOps = resetOperationId(allTmpOperations, allTmpModels, tagName);
+
                         // get version
                         String version = getStandardVersion(apiVersion);
+
+                        // generate files by options
+                        for (Object tmpOption : optionOps) {
+                            CodegenOperation co = (CodegenOperation) tmpOption;
+                            if (co == null) {
+                                continue;
+                            }
+                            // eg: KeyFilterOption
+                            String classname = co.vendorExtensions.get("x-filteroption").toString();
+                            // eg: com.huawei.openstack4j.openstack.csbs.v1.domain
+                            String packagename = modelPackage + "." + serviceType.toLowerCase() + "." + version + "."
+                                    + modelFixedFolderName;
+
+                            Map<String, Object> templateParam = new HashMap<String, Object>();
+                            templateParam.put("classVarName", tagName);
+                            templateParam.put("year", year);
+                            templateParam.put("classname", classname);
+                            templateParam.put("packagename", packagename);
+                            templateParam.put("option", co);
+
+                            if (System.getProperty("debugSwagger") != null) {
+                                LOGGER.info("############ Option Param info ############");
+                                Json.prettyPrint(templateParam);
+                            }
+
+                            // eg:core/src/main/java/com/huawei/openstack4j/openstack/csbs/v1/domain/xxfilteroption
+                            String filename = (apiFileFolder() + File.separator + serviceType.toLowerCase()
+                                    + File.separator + version + File.separator + modelFixedFolderName + File.separator
+                                    + classname + suffix);
+
+                            templateParam.put("templateName", extensionOption);
+                            templateParam.put("filename", filename);
+
+                            // skip overwriting
+                            if (!super.shouldOverwrite(filename) && new File(filename).exists()) {
+                                LOGGER.info("Skipped overwriting " + filename);
+                                continue;
+                            }
+                            output.add(templateParam);
+                        }
 
                         // generate files by models
                         for (Object tmpModel : allTmpModels) {
@@ -764,6 +808,12 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                             }
                             // eg: ListKeyPairResp
                             String classname = cm.classname;
+                            if (cm.vendorExtensions.containsKey("x-classname")) {
+                                String xclassname = (String) cm.vendorExtensions.get("x-classname");
+                                if (xclassname != null && xclassname != "") {
+                                    classname = xclassname;
+                                }
+                            }
                             // eg: com.huawei.openstack4j.openstack.csbs.v1.domain
                             String packagename = modelPackage + "." + serviceType.toLowerCase() + "." + version + "."
                                     + modelFixedFolderName;
@@ -800,7 +850,9 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                     }
                 }
             }
-        } catch (Exception e) {
+        } catch (
+
+        Exception e) {
             throw new RuntimeException("Could not generate model file", e);
         }
 
@@ -857,6 +909,9 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                     if (allTmpOperations.isEmpty()) {
                         continue;
                     }
+
+                    // reset
+                    resetOperationId(allTmpOperations, allTmpModels, tagName);
 
                     String suffix = apiTemplateFiles().get(extensionApiImpl);
 
@@ -1144,19 +1199,25 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                 }
                 String modelapiVersion = tagInfo.get("apiVersion").toString();
                 if (apiVersion.equals(modelapiVersion)) {
+                    Map<String, Object> tmpModel = new HashMap<String, Object>();
+                    // copyModel
+                    for (String key : model.keySet()) {
+                        tmpModel.put(key, model.get(key));
+                    }
+
                     if (tagInfo.containsKey("isReq") && (boolean) tagInfo.get("isReq")) {
-                        model.put("isReq", tagInfo.get("isReq"));
+                        tmpModel.put("isReq", tagInfo.get("isReq"));
                     } else {
-                        model.put("isReq", false);
+                        tmpModel.put("isReq", false);
                     }
 
                     if (tagInfo.containsKey("isResp") && (boolean) tagInfo.get("isResp")) {
-                        model.put("isResp", tagInfo.get("isResp"));
+                        tmpModel.put("isResp", tagInfo.get("isResp"));
                     } else {
-                        model.put("isResp", false);
+                        tmpModel.put("isResp", false);
                     }
 
-                    allTmpModels.add(model);
+                    allTmpModels.add(tmpModel);
                     break;
                 }
             }
@@ -1207,5 +1268,268 @@ public class JavaClientCodegen extends AbstractJavaCodegen
         }
 
         return allTmpOperations;
+    }
+
+    private boolean getOperationParamsRequired(CodegenOperation op) {
+        boolean required = false;
+        int length = 0;
+        for (CodegenParameter p : op.pathParams) {
+            if (p.vendorExtensions.containsKey("x-isProject")
+                    && (boolean) p.vendorExtensions.get("x-isProject") == true) {
+                continue;
+            }
+            length++;
+            if (p.required) {
+                required = true;
+                return required;
+            }
+        }
+        for (CodegenParameter p : op.queryParams) {
+            length++;
+            if (p.required) {
+                required = true;
+                return required;
+            }
+        }
+        for (CodegenParameter p : op.bodyParams) {
+            length++;
+            if (p.required) {
+                required = true;
+                return required;
+            }
+        }
+        if (length == 0) {
+            required = true;
+        }
+        return required;
+    }
+
+    private List<Object> resetOperationId(List<Object> allTmpOperations, List<Object> allTmpModels, String tagName) {
+        List<Object> optionOps = new ArrayList<Object>();
+        for (Object allItems : allTmpOperations) {
+            Map<String, Object> item = (Map<String, Object>) allItems;
+            if (!item.containsKey("operations")) {
+                continue;
+            }
+
+            Map<String, Object> operations = (Map<String, Object>) item.get("operations");
+            if (!operations.containsKey("operation")) {
+                continue;
+            }
+            List<CodegenOperation> operation = (List<CodegenOperation>) operations.get("operation");
+
+            Map<String, String> newApiOpIds = getApiReqFuncName(operation);
+
+            for (CodegenOperation op : operation) {
+                String newOpId = newApiOpIds.get(op.operationId.toString());
+                op.vendorExtensions.put("x-nickname", newOpId);
+
+                boolean isExtractInfo = false;
+                if (op.vendorExtensions.containsKey("isExtractInfo")
+                        && (boolean) op.vendorExtensions.get("isExtractInfo") == true) {
+                    isExtractInfo = true;
+                }
+                if (!isExtractInfo) {
+                    Map<String, String> newClassNames = getNewClassNamesByTagName(tagName);
+                    if (newClassNames.containsKey(newOpId)) {
+                        op.vendorExtensions.put("x-classname", newClassNames.get(newOpId));
+                    } else {
+                        if (op.returnBaseType != null) {
+                            String originalClassname = getIrregularClassName(toModelName(op.returnBaseType.toString()));
+                            op.vendorExtensions.put("x-classname", originalClassname);
+                        }
+                    }
+                }
+
+                // get list
+                if (newOpId.toLowerCase().startsWith("get") || newOpId.toLowerCase().startsWith("list")) {
+                    boolean required = getOperationParamsRequired(op);
+                    if (!required) {
+                        op.vendorExtensions.put("x-notrequired", true);
+                    }
+                    // QueryParams size
+                    if (op.queryParams.size() > 1) {
+                        String prefix = op.returnBaseType;
+                        if (op.vendorExtensions.containsKey("x-classname")) {
+                            prefix = op.vendorExtensions.get("x-classname").toString();
+                        }
+                        op.vendorExtensions.put("x-filteroption", prefix + "FilterOption");
+                        optionOps.add(op);
+                    }
+                }
+            }
+            resetModelNames(newApiOpIds, allTmpModels, tagName);
+        }
+        return optionOps;
+    }
+
+    private Map<String, String> getApiReqFuncName(List<CodegenOperation> operation) {
+        String newApiFunName = "";
+        Map<String, Object> apiIds = new HashMap<String, Object>();
+        for (CodegenOperation op : operation) {
+            String opId = op.operationId.toString().toLowerCase();
+            newApiFunName = getApiFunNameByOpIdMethod(opId);
+
+            if (newApiFunName == "") {
+                newApiFunName = getApiFunNameByMethod(op);
+            }
+
+            if (newApiFunName == "") {
+                newApiFunName = getApiFunNameByOpId(op, apiIds);
+            }
+
+            if (apiIds.containsKey(newApiFunName)) {
+                reduceDupName(newApiFunName, op, apiIds);
+            } else {
+                apiIds.put(newApiFunName, op);
+            }
+        }
+
+        Map<String, String> outPutApiIds = new HashMap<String, String>();
+        for (String name : apiIds.keySet()) {
+            CodegenOperation tmpOp = (CodegenOperation) apiIds.get(name);
+            outPutApiIds.put(tmpOp.operationId.toString(), name);
+        }
+
+        return outPutApiIds;
+    }
+
+    private String getApiFunNameByOpIdMethod(String opId) {
+        String newApiFunName = "";
+        Map<String, String> apiOpIdContansMethods = new HashMap<String, String>();
+        apiOpIdContansMethods.put("create", "create");
+        apiOpIdContansMethods.put("update", "update");
+        apiOpIdContansMethods.put("list", "list");
+        apiOpIdContansMethods.put("get", "get");
+        apiOpIdContansMethods.put("batch", "list");
+        apiOpIdContansMethods.put("modify", "update");
+
+        for (String method : apiOpIdContansMethods.keySet()) {
+            if (opId.contains(method)) {
+                newApiFunName = apiOpIdContansMethods.get(method);
+                break;
+            }
+        }
+
+        return newApiFunName;
+    }
+
+    private String getApiFunNameByMethod(CodegenOperation op) {
+        String newApiFunName = "";
+        Map<String, String> apiMethods = new HashMap<String, String>();
+        apiMethods.put("x-is-delete-method", "delete");
+        apiMethods.put("x-is-get-method", "get");
+
+        for (String mt : apiMethods.keySet()) {
+            if (op.vendorExtensions.containsKey(mt)) {
+                newApiFunName = apiMethods.get(mt);
+                break;
+            }
+        }
+
+        return newApiFunName;
+    }
+
+    private String getApiFunNameByOpId(CodegenOperation op, Map<String, Object> apiIds) {
+        String tmpOpId = op.operationId.toString();
+        String baseName = op.baseName.toString();
+
+        String newApiFunName = tmpOpId.replace(baseName, "");
+        if (newApiFunName.length() < 2) {
+            newApiFunName = tmpOpId;
+        }
+
+        if (apiIds.containsKey(newApiFunName)) {
+            newApiFunName = tmpOpId;
+        }
+
+        return newApiFunName;
+    }
+
+    private void reduceDupName(String newApiFunName, CodegenOperation op, Map<String, Object> apiIds) {
+        CodegenOperation preDupOp = (CodegenOperation) apiIds.get(newApiFunName);
+        CodegenOperation originMethodNameOp = preDupOp;
+        CodegenOperation resetOp = op;
+
+        boolean changeOp = false;
+        if (newApiFunName == "get") {
+            String tagName = op.baseName.toString().toLowerCase();
+            String preOpId = preDupOp.operationId.toString().toLowerCase();
+            String opId = op.operationId.toString().toLowerCase();
+
+            if ((!preOpId.contains(tagName)) && opId.contains(tagName)) {
+                changeOp = true;
+            } else if (preDupOp.queryParams.size() > op.queryParams.size()) {
+                changeOp = true;
+            }
+        } else if (newApiFunName == "create" || newApiFunName == "update") {
+            if (preDupOp.bodyParams.size() > op.bodyParams.size()) {
+                changeOp = true;
+            }
+        } else if (preDupOp.path.length() > op.path.length()) {
+            changeOp = true;
+        }
+
+        if (changeOp == true) {
+            resetOp = preDupOp;
+            originMethodNameOp = op;
+        }
+
+        String resetOpNewApiFunName = getApiFunNameByOpId(resetOp, apiIds);
+        apiIds.put(resetOpNewApiFunName, resetOp);
+        apiIds.put(newApiFunName, originMethodNameOp);
+    }
+
+    private Map<String, String> getNewClassNamesByTagName(String tagName) {
+        Map<String, String> newClassNames = new HashMap<String, String>();
+        newClassNames.put("get", camelize(tagName));
+        newClassNames.put("list", camelize(tagName) + "s");
+        newClassNames.put("create", camelize(tagName) + "Resp");
+
+        return newClassNames;
+    }
+
+    private void resetModelNames(Map<String, String> newApiOpIds, List<Object> allTmpModels, String tagName) {
+        Map<String, String> newClassNames = getNewClassNamesByTagName(tagName);
+        for (int i = 0; i < allTmpModels.size(); i++) {
+            Map<String, Object> model = (Map<String, Object>) allTmpModels.get(i);
+            CodegenModel m = (CodegenModel) model.get("model");
+
+            // reset operationId in model
+            if (model.containsKey("nickname") && newApiOpIds.containsKey(model.get("nickname").toString())) {
+                String newOpId = newApiOpIds.get(model.get("nickname").toString());
+                m.vendorExtensions.put("x-nickname", newOpId);
+            }
+
+            if (model.containsKey("isExtractInfo") && (boolean) model.get("isExtractInfo") == true) {
+                if (m.vendorExtensions.containsKey("x-nickname")) {
+                    String newOpId = m.vendorExtensions.get("x-nickname").toString();
+                    if (newClassNames.containsKey(newOpId)) {
+                        m.vendorExtensions.put("x-classname", newClassNames.get(newOpId));
+                    } else {
+                        String originalClassname = getIrregularClassName(m.classname.toString());
+                        m.vendorExtensions.put("x-classname", originalClassname);
+                    }
+                }
+            }
+        }
+    }
+
+    private String getIrregularClassName(String originalClassName) {
+        List<String> methods = Arrays.asList("Create", "Delete", "Get", "List", "Update", "Resp");
+        String newClassName = originalClassName;
+
+        for (int i = 0; i < methods.size(); i++) {
+            String method = methods.get(i);
+            if (newClassName.contains(method)) {
+                newClassName = newClassName.replace(method, "");
+            }
+        }
+
+        if (newClassName == "") {
+            newClassName = originalClassName;
+        }
+
+        return newClassName;
     }
 }
