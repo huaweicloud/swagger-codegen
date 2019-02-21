@@ -11,7 +11,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 /**
  * {{#description}}{{{description}}}{{/description}}
  */
-public enum {{classname}} {
+public enum {{#vendorExtensions.x-classname}}{{vendorExtensions.x-classname}}{{/vendorExtensions.x-classname}}{{^vendorExtensions.x-classname}}{{classname}}{{/vendorExtensions.x-classname}} {
     {{#allowableValues}}
     {{#enumVars}}
     {{{name}}}({{{value}}}){{^-last}},{{/-last}}{{#-last}};{{/-last}}
@@ -20,7 +20,7 @@ public enum {{classname}} {
 
     private final {{{datatype}}} value;
 
-    private {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{{classname}}}{{/datatypeWithEnum}}({{{datatype}}} value) {
+    private {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{#vendorExtensions.x-classname}}{{vendorExtensions.x-classname}}{{/vendorExtensions.x-classname}}{{^vendorExtensions.x-classname}}{{classname}}{{/vendorExtensions.x-classname}}{{/datatypeWithEnum}}({{{datatype}}} value) {
         this.value = value;
     }
 
@@ -30,9 +30,9 @@ public enum {{classname}} {
     }
 
     @JsonCreator
-    public static {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{{classname}}}{{/datatypeWithEnum}} value(String v) {
+    public static {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{#vendorExtensions.x-classname}}{{vendorExtensions.x-classname}}{{/vendorExtensions.x-classname}}{{^vendorExtensions.x-classname}}{{classname}}{{/vendorExtensions.x-classname}}{{/datatypeWithEnum}} value(String v) {
         if (v == null || v.isEmpty()) return null;
-        for ({{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{{classname}}}{{/datatypeWithEnum}} t : {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{{classname}}}{{/datatypeWithEnum}}.values()) {
+        for ({{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{#vendorExtensions.x-classname}}{{vendorExtensions.x-classname}}{{/vendorExtensions.x-classname}}{{^vendorExtensions.x-classname}}{{classname}}{{/vendorExtensions.x-classname}}{{/datatypeWithEnum}} t : {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{#vendorExtensions.x-classname}}{{vendorExtensions.x-classname}}{{/vendorExtensions.x-classname}}{{^vendorExtensions.x-classname}}{{classname}}{{/vendorExtensions.x-classname}}{{/datatypeWithEnum}}.values()) {
             if (String.valueOf(t.value).equals(v)) {
                 return t;
             }
@@ -64,7 +64,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class {{classname}} implements ModelEntity {
+public class {{#vendorExtensions.x-classname}}{{vendorExtensions.x-classname}}{{/vendorExtensions.x-classname}}{{^vendorExtensions.x-classname}}{{classname}}{{/vendorExtensions.x-classname}} implements ModelEntity {
     /**
      * serialVersionUID
      */
@@ -84,7 +84,7 @@ public class {{classname}} implements ModelEntity {
 
         private final {{{datatype}}} value;
 
-        private {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{{classname}}}{{/datatypeWithEnum}}({{{datatype}}} value) {
+        private {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{#vendorExtensions.x-classname}}{{vendorExtensions.x-classname}}{{/vendorExtensions.x-classname}}{{^vendorExtensions.x-classname}}{{classname}}{{/vendorExtensions.x-classname}}{{/datatypeWithEnum}}({{{datatype}}} value) {
             this.value = value;
         }
 
@@ -94,9 +94,9 @@ public class {{classname}} implements ModelEntity {
         }
 
         @JsonCreator
-        public static {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{{classname}}}{{/datatypeWithEnum}} value(String v) {
+        public static {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{#vendorExtensions.x-classname}}{{vendorExtensions.x-classname}}{{/vendorExtensions.x-classname}}{{^vendorExtensions.x-classname}}{{classname}}{{/vendorExtensions.x-classname}}{{/datatypeWithEnum}} value(String v) {
             if (v == null || v.isEmpty()) return null;
-            for ({{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{{classname}}}{{/datatypeWithEnum}} t : {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{{classname}}}{{/datatypeWithEnum}}.values()) {
+            for ({{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{#vendorExtensions.x-classname}}{{vendorExtensions.x-classname}}{{/vendorExtensions.x-classname}}{{^vendorExtensions.x-classname}}{{classname}}{{/vendorExtensions.x-classname}}{{/datatypeWithEnum}} t : {{#datatypeWithEnum}}{{{.}}}{{/datatypeWithEnum}}{{^datatypeWithEnum}}{{#vendorExtensions.x-classname}}{{vendorExtensions.x-classname}}{{/vendorExtensions.x-classname}}{{^vendorExtensions.x-classname}}{{classname}}{{/vendorExtensions.x-classname}}{{/datatypeWithEnum}}.values()) {
                 if (String.valueOf(t.value).equals(v)) {
                     return t;
                 }
