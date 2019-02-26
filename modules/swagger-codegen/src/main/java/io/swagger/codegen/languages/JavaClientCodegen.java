@@ -913,6 +913,9 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                     // reset
                     resetOperationId(allTmpOperations, allTmpModels, tagName);
 
+                    // validate
+                    addRequestValidate(allTmpOperations, allTmpModels, tagName);
+
                     String suffix = apiTemplateFiles().get(extensionApiImpl);
 
                     // eg: com.huawei.openstack4j.openstack.csbs.v1.internal
@@ -953,11 +956,6 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                     templateParam.put("templateName", extensionApiImpl);
                     templateParam.put("filename", filename);
                     output.add(templateParam);
-
-                    if (System.getProperty("debugSwagger") != null) {
-                        LOGGER.info("############ Template Param info ############");
-                        Json.prettyPrint(templateParam);
-                    }
                 }
 
                 String importpackagename = null;
@@ -1531,5 +1529,120 @@ public class JavaClientCodegen extends AbstractJavaCodegen
         }
 
         return newClassName;
+    }
+
+    protected String strTemplate ="\n%scheckArgument(!Strings.isNullOrEmpty(%s), \"parameter `%s` should not be empty\");";
+    protected String otherTemplate ="\n%scheckArgument(null != %s, \"parameter `%s` should not be null\");";
+    protected String forBeginTemplate = "\n%sfor(int %s=0; %s<%s.size(); %s++) {";
+    protected String forEndTemplate = "\n%s}";
+    protected String[] indexCache = {"i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "a", "b", "c", "d", "e", "f", "g", "h"};
+    private String lookupFromModel(List<Object> allTmpModels, String complexType, Boolean isContainer, String currentVar, String space, int index, String strValidate){
+        // Complex Type
+        if(complexType!=null && complexType!="") {
+            LOGGER.info("############ complexType ############" + complexType);
+            // Lookup from model
+            for (int i = 0; i < allTmpModels.size(); i++) {
+                Map<String, Object> model = (Map<String, Object>) allTmpModels.get(i);
+                CodegenModel m = (CodegenModel) model.get("model");
+                if(m != null) {
+                    if (m.classname.equals(complexType)) {
+                        LOGGER.info("############ classname ############", m.classname);
+                        // base var
+                        String baseVar = currentVar;
+                        // base space
+                        String baseSpace = space;
+                        // Array
+                        if(isContainer) {
+                            // for begin
+                            String baseIndex = getIndexFromCache(index);
+                            baseVar = currentVar+".get("+baseIndex+")";
+                            strValidate += String.format(forBeginTemplate, space, baseIndex, baseIndex, currentVar, baseIndex);
+                            baseSpace += "    ";
+                            strValidate += String.format(otherTemplate, baseSpace, baseVar, m.classname);
+                            index++;
+                        }
+                        // Required Parameter
+                        if (m.hasRequired) {
+                            for (CodegenProperty cp : m.requiredVars) {
+                                if (cp!=null) {
+                                    // tmp var
+                                    String tmpVar = baseVar+"."+cp.getter+"()";
+                                    if (cp.isString) {
+                                        // String
+                                        strValidate += String.format(strTemplate, baseSpace, tmpVar, cp.name);
+                                    } else {
+                                        // Other
+                                        strValidate += String.format(otherTemplate, baseSpace, tmpVar, cp.name);
+                                    }
+                                    // Recursion
+                                    strValidate = lookupFromModel(allTmpModels, cp.complexType, cp.isContainer, tmpVar, baseSpace, index, strValidate);
+                                }
+                            }
+                        }
+                        // Array
+                        if(isContainer) {
+                            // for end
+                            strValidate += String.format(forEndTemplate, space);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        return strValidate;
+    }
+
+    private String getIndexFromCache(int index) {
+        if (index >= indexCache.length){
+            return indexCache[0]+index;
+        } else {
+            return indexCache[index];
+        }
+    }
+
+    private void addRequestValidate(List<Object> allTmpOperations, List<Object> allTmpModels, String tagName) {
+        for (Object allItems : allTmpOperations) {
+            Map<String, Object> item = (Map<String, Object>) allItems;
+            if (!item.containsKey("operations")) {
+                continue;
+            }
+
+            Map<String, Object> operations = (Map<String, Object>) item.get("operations");
+            if (!operations.containsKey("operation")) {
+                continue;
+            }
+
+            List<CodegenOperation> operation = (List<CodegenOperation>) operations.get("operation");
+            for (CodegenOperation op : operation) {
+                if (op.bodyParams!=null) {
+                    // Init str
+                    String strValidate = "";
+                    for (CodegenParameter p : op.bodyParams) {
+                        // Required Parameter
+                        if (p.required) {
+                            // init blank space
+                            String space ="        ";
+                            // init index
+                            int index = 0;
+                            if (p.isString) {
+                                // String
+                                strValidate += String.format(strTemplate, space, p.paramName, p.paramName);
+                            } else {
+                                // Other
+                                strValidate += String.format(otherTemplate, space, p.paramName, p.paramName); 
+                            }
+                            // Complex Type
+                            if (!p.isPrimitiveType) {
+                                strValidate = lookupFromModel(allTmpModels, p.baseType, p.isContainer, p.paramName, space, index, strValidate);
+                            }
+                        }
+                    }
+                    // add x-request-validate
+                    if(strValidate!=null && strValidate!="") {
+                        op.vendorExtensions.put("x-request-validate", strValidate);
+                    }
+                }
+            }
+        }
     }
 }
