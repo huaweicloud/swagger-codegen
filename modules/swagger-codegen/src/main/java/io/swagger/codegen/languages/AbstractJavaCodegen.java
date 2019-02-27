@@ -1319,9 +1319,9 @@ public abstract class AbstractJavaCodegen extends DefaultCodegen implements Code
      * @param name the name of the property
      * @return partial getter name based on naming convention
      */
-    public String toBooleanGetter(String name) {
+    /*public String toBooleanGetter(String name) {
         return getterAndSetterCapitalize(name);
-    }
+    }*/
 
     @Override
     public String sanitizeTag(String tag) {
