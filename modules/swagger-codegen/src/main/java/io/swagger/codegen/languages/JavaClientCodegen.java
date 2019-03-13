@@ -925,7 +925,7 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                     String importpackagename = apiPackage + "." + serviceType.toLowerCase() + "." + version + "."
                             + modelFixedFolderName;
 
-                    String apiImplClassName = serviceType + camelize(tagName) + "Service";
+                    String apiImplClassName = /*serviceType +*/camelize(tagName) + "Service";
 
                     // fill with HashMap
                     Map<String, Object> m = new HashMap<>();
